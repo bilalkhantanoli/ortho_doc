@@ -1,18 +1,20 @@
 import { useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Stethoscope, User, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { useAuthStore, UserRole } from '@/lib/store';
+import { useAuth } from '@/hooks/useAuth';
+import type { UserRole } from '@/lib/domain';
 import { toast } from 'sonner';
+import { getErrorMessage } from '@/lib/errors';
 
 const Login = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const login = useAuthStore((state) => state.login);
+  const { login, profile } = useAuth();
   
   const [role, setRole] = useState<UserRole>((searchParams.get('role') as UserRole) || 'patient');
   const [email, setEmail] = useState('');
@@ -24,15 +26,19 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      await login(email, password, role);
+      await login(email, password);
       toast.success('Login successful!');
-      navigate(role === 'doctor' ? '/doctor/dashboard' : '/patient/dashboard');
+      navigate(`/${role}/dashboard`);
     } catch (error) {
-      toast.error('Login failed. Please try again.');
+      toast.error(getErrorMessage(error, 'Login failed. Please try again.'));
     } finally {
       setIsLoading(false);
     }
   };
+
+  if (profile) {
+    return <Navigate to={`/${profile.role}/dashboard`} replace />;
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-hero p-4">

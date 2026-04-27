@@ -5,16 +5,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import DashboardLayout from '@/components/DashboardLayout';
-import { mockAppointments } from '@/lib/mockData';
 import { BookAppointmentDialog } from '@/components/modals/BookAppointmentDialog';
 import { UploadXrayDialog } from '@/components/modals/UploadXrayDialog';
+import { useDashboardQuery } from '@/hooks/useDashboard';
 
 const PatientDashboard = () => {
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [showAppointmentDialog, setShowAppointmentDialog] = useState(false);
-  
-  const nextAppointment = mockAppointments.find((a) => a.status === 'scheduled');
-  const treatmentProgress = 65; // Mock progress
+  const { data } = useDashboardQuery('patient');
 
   const quickActions = [
     {
@@ -28,7 +26,7 @@ const PatientDashboard = () => {
       title: 'Customize Brace',
       description: 'Choose your brace color and style',
       icon: Palette,
-      href: '/patient/customize',
+      href: data?.openCases ? '/patient/cases' : undefined,
       color: 'bg-gradient-secondary',
     },
     {
@@ -56,7 +54,7 @@ const PatientDashboard = () => {
         </div>
 
         {/* Next Appointment */}
-        {nextAppointment && (
+        {data?.nextAppointment && (
           <Card className="border-l-4 border-l-primary bg-gradient-to-r from-primary/5 to-transparent">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -68,7 +66,7 @@ const PatientDashboard = () => {
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="font-medium text-foreground">
-                    {new Date(nextAppointment.date).toLocaleDateString('en-US', {
+                    {new Date(data.nextAppointment.scheduledAt).toLocaleDateString('en-US', {
                       weekday: 'long',
                       year: 'numeric',
                       month: 'long',
@@ -76,7 +74,11 @@ const PatientDashboard = () => {
                     })}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    {nextAppointment.time} - {nextAppointment.type}
+                    {new Date(data.nextAppointment.scheduledAt).toLocaleTimeString([], {
+                      hour: 'numeric',
+                      minute: '2-digit',
+                    })}{' '}
+                    - {data.nextAppointment.appointmentType.replace('_', ' ')}
                   </p>
                 </div>
                 <Button variant="outline">View Details</Button>
@@ -95,11 +97,13 @@ const PatientDashboard = () => {
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Overall Progress</span>
-                <span className="font-medium text-foreground">{treatmentProgress}%</span>
+                <span className="font-medium text-foreground">{data?.treatmentProgress ?? 0}%</span>
               </div>
-              <Progress value={treatmentProgress} className="h-2" />
+              <Progress value={data?.treatmentProgress ?? 0} className="h-2" />
               <p className="text-xs text-muted-foreground">
-                Estimated completion: 6 months remaining
+                {data?.openCases
+                  ? `${data.openCases} active case(s) still in progress`
+                  : 'No active treatment cases yet'}
               </p>
             </div>
           </CardContent>

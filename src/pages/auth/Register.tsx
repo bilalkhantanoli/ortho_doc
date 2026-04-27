@@ -1,18 +1,20 @@
 import { useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Stethoscope, User, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { useAuthStore, UserRole } from '@/lib/store';
+import { useAuth } from '@/hooks/useAuth';
+import type { UserRole } from '@/lib/domain';
 import { toast } from 'sonner';
+import { getErrorMessage } from '@/lib/errors';
 
 const Register = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const register = useAuthStore((state) => state.register);
+  const { register, profile } = useAuth();
   
   const [role, setRole] = useState<UserRole>((searchParams.get('role') as UserRole) || 'patient');
   const [name, setName] = useState('');
@@ -25,15 +27,19 @@ const Register = () => {
     setIsLoading(true);
 
     try {
-      await register(name, email, password, role);
-      toast.success('Account created successfully!');
-      navigate(role === 'doctor' ? '/doctor/dashboard' : '/patient/dashboard');
+      await register({ fullName: name, email, password, role });
+      toast.success('Account created successfully. Check your email if confirmation is enabled.');
+      navigate(`/${role}/dashboard`);
     } catch (error) {
-      toast.error('Registration failed. Please try again.');
+      toast.error(getErrorMessage(error, 'Registration failed. Please try again.'));
     } finally {
       setIsLoading(false);
     }
   };
+
+  if (profile) {
+    return <Navigate to={`/${profile.role}/dashboard`} replace />;
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-hero p-4">

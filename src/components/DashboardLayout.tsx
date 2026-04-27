@@ -6,13 +6,12 @@ import {
   Users,
   Upload,
   Calendar,
-  Palette,
   FileText,
   LogOut,
   Menu,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useAuthStore } from '@/lib/store';
+import { useAuth } from '@/hooks/useAuth';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 
 interface DashboardLayoutProps {
@@ -23,10 +22,10 @@ interface DashboardLayoutProps {
 const DashboardLayout = ({ children, role }: DashboardLayoutProps) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, logout } = useAuthStore();
+  const { profile, logout } = useAuth();
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate('/');
   };
 
@@ -41,7 +40,6 @@ const DashboardLayout = ({ children, role }: DashboardLayoutProps) => {
     { href: '/patient/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/patient/upload', label: 'Upload', icon: Upload },
     { href: '/patient/cases', label: 'My Cases', icon: FileText },
-    { href: '/patient/customize', label: 'Customize Brace', icon: Palette },
     { href: '/patient/appointments', label: 'Appointments', icon: Calendar },
   ];
 
@@ -83,8 +81,8 @@ const DashboardLayout = ({ children, role }: DashboardLayoutProps) => {
         </div>
         <nav className="flex flex-col gap-2 p-4">
           <div className="mb-4 rounded-lg bg-muted p-3">
-            <p className="text-sm font-medium text-foreground">{user?.name}</p>
-            <p className="text-xs text-muted-foreground">{user?.email}</p>
+            <p className="text-sm font-medium text-foreground">{profile?.fullName}</p>
+            <p className="text-xs text-muted-foreground">{profile?.email}</p>
           </div>
           <NavLinks />
         </nav>
@@ -107,8 +105,8 @@ const DashboardLayout = ({ children, role }: DashboardLayoutProps) => {
               </div>
               <nav className="flex flex-col gap-2 p-4">
                 <div className="mb-4 rounded-lg bg-muted p-3">
-                  <p className="text-sm font-medium text-foreground">{user?.name}</p>
-                  <p className="text-xs text-muted-foreground">{user?.email}</p>
+                  <p className="text-sm font-medium text-foreground">{profile?.fullName}</p>
+                  <p className="text-xs text-muted-foreground">{profile?.email}</p>
                 </div>
                 <NavLinks />
               </nav>

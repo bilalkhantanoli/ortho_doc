@@ -1,32 +1,63 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Palette, Check } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import DashboardLayout from '@/components/DashboardLayout';
-import { braceOptions } from '@/lib/mockData';
+import { useBraceOptionsQuery, useBracePreferenceQuery, useDeleteBracePreferenceMutation, useSaveBracePreferenceMutation } from '@/hooks/useBraces';
+import { useCaseDetailQuery } from '@/hooks/useCases';
+import { BRACE_COLORS } from '@/lib/constants';
 import { toast } from 'sonner';
+import { getErrorMessage } from '@/lib/errors';
 
 interface CustomizeProps {
   role: 'doctor' | 'patient';
 }
 
 const Customize = ({ role }: CustomizeProps) => {
-  const [selectedBrace, setSelectedBrace] = useState(braceOptions[0].id);
-  const [selectedColor, setSelectedColor] = useState('#3B82F6');
+  const navigate = useNavigate();
+  const { caseId } = useParams<{ caseId: string }>();
+  const { data: caseRecord } = useCaseDetailQuery(caseId);
+  const { data: options = [] } = useBraceOptionsQuery();
+  const { data: preference } = useBracePreferenceQuery(caseId);
+  const savePreferenceMutation = useSaveBracePreferenceMutation(caseId ?? '');
+  const deletePreferenceMutation = useDeleteBracePreferenceMutation(caseId ?? '');
+  const [selectedBrace, setSelectedBrace] = useState('');
+  const [selectedColor, setSelectedColor] = useState(BRACE_COLORS[0].value);
 
-  const colors = [
-    { name: 'Blue', value: '#3B82F6' },
-    { name: 'Purple', value: '#A855F7' },
-    { name: 'Pink', value: '#EC4899' },
-    { name: 'Green', value: '#10B981' },
-    { name: 'Orange', value: '#F59E0B' },
-    { name: 'Red', value: '#EF4444' },
-  ];
+  useEffect(() => {
+    if (preference) {
+      setSelectedBrace(preference.braceOptionId);
+      setSelectedColor(preference.colorHex);
+    } else if (options[0]) {
+      setSelectedBrace(options[0].id);
+      setSelectedColor(options[0].defaultColorHex ?? BRACE_COLORS[0].value);
+    }
+  }, [preference, options]);
 
-  const handleSave = () => {
-    const selected = braceOptions.find((b) => b.id === selectedBrace);
-    toast.success(`Saved! ${selected?.name} in ${colors.find((c) => c.value === selectedColor)?.name}`);
+  const handleSave = async () => {
+    if (!caseId || !caseRecord) {
+      return;
+    }
+
+    try {
+      await savePreferenceMutation.mutateAsync({
+        caseId,
+        patientId: caseRecord.patientId,
+        braceOptionId: selectedBrace,
+        colorHex: selectedColor,
+      });
+      const selected = options.find((item) => item.id === selectedBrace);
+      toast.success(
+        `Saved ${selected?.name ?? 'brace selection'} in ${
+          BRACE_COLORS.find((color) => color.value === selectedColor)?.name ?? selectedColor
+        }.`,
+      );
+      navigate(`/${role}/analysis-result/${caseId}`);
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Unable to save your brace preference.'));
+    }
   };
 
   return (
@@ -41,11 +72,11 @@ const Customize = ({ role }: CustomizeProps) => {
           {/* Brace Type Selection */}
           <Card>
             <CardHeader>
-              <CardTitle>Brace Type</CardTitle>
-              <CardDescription>Select your preferred brace style</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {braceOptions.map((option) => (
+            <CardTitle>Brace Type</CardTitle>
+            <CardDescription>Select your preferred brace style</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+              {options.map((option) => (
                 <motion.button
                   key={option.id}
                   whileHover={{ scale: 1.02 }}
@@ -76,12 +107,12 @@ const Customize = ({ role }: CustomizeProps) => {
           {/* Color Selection */}
           <Card>
             <CardHeader>
-              <CardTitle>Color Options</CardTitle>
-              <CardDescription>Pick your favorite color</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
+            <CardTitle>Color Options</CardTitle>
+            <CardDescription>Pick your favorite color</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
               <div className="grid grid-cols-3 gap-3">
-                {colors.map((color) => (
+                {BRACE_COLORS.map((color) => (
                   <motion.button
                     key={color.value}
                     whileHover={{ scale: 1.1 }}
@@ -124,16 +155,34 @@ const Customize = ({ role }: CustomizeProps) => {
           <CardContent className="flex items-center justify-between p-6">
             <div>
               <p className="font-semibold text-foreground">
-                {braceOptions.find((b) => b.id === selectedBrace)?.name}
+                {options.find((b) => b.id === selectedBrace)?.name}
               </p>
               <p className="text-sm text-muted-foreground">
-                Color: {colors.find((c) => c.value === selectedColor)?.name}
+                Color: {BRACE_COLORS.find((c) => c.value === selectedColor)?.name}
               </p>
             </div>
-            <Button onClick={handleSave} className="gap-2">
-              <Palette className="h-4 w-4" />
-              Save Selection
-            </Button>
+            <div className="flex gap-2">
+              <Button onClick={handleSave} className="gap-2">
+                <Palette className="h-4 w-4" />
+                Save Selection
+              </Button>
+              <Button
+                variant="outline"
+                onClick={async () => {
+                  if (!caseId) {
+                    return;
+                  }
+                  try {
+                    await deletePreferenceMutation.mutateAsync();
+                    toast.success('Brace preference reset.');
+                  } catch (error) {
+                    toast.error(getErrorMessage(error, 'Unable to reset the preference.'));
+                  }
+                }}
+              >
+                Reset
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>

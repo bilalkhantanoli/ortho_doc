@@ -11,7 +11,9 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useCreatePatientMutation } from '@/hooks/usePatients';
 import { toast } from 'sonner';
+import { getErrorMessage } from '@/lib/errors';
 
 interface AddPatientDialogProps {
   open: boolean;
@@ -19,6 +21,7 @@ interface AddPatientDialogProps {
 }
 
 export const AddPatientDialog = ({ open, onOpenChange }: AddPatientDialogProps) => {
+  const createPatientMutation = useCreatePatientMutation();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -26,7 +29,7 @@ export const AddPatientDialog = ({ open, onOpenChange }: AddPatientDialogProps) 
     phone: '',
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!formData.name || !formData.email || !formData.age) {
@@ -34,11 +37,19 @@ export const AddPatientDialog = ({ open, onOpenChange }: AddPatientDialogProps) 
       return;
     }
 
-    toast.success('Patient added successfully!');
-    onOpenChange(false);
-    
-    // Reset form
-    setFormData({ name: '', email: '', age: '', phone: '' });
+    try {
+      await createPatientMutation.mutateAsync({
+        fullName: formData.name,
+        email: formData.email,
+        age: formData.age ? Number(formData.age) : null,
+        phone: formData.phone || null,
+      });
+      toast.success('Patient linked successfully.');
+      onOpenChange(false);
+      setFormData({ name: '', email: '', age: '', phone: '' });
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Unable to add patient.'));
+    }
   };
 
   const handleChange = (field: string, value: string) => {
@@ -113,7 +124,7 @@ export const AddPatientDialog = ({ open, onOpenChange }: AddPatientDialogProps) 
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit">
+            <Button type="submit" disabled={createPatientMutation.isPending}>
               Add Patient
             </Button>
           </DialogFooter>

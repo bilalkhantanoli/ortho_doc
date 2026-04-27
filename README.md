@@ -1,155 +1,83 @@
-# Ortho Mock Portal
+# OrthoDoc AI
 
-A modern React application built with Vite, TypeScript, and shadcn/ui components.
+This application is now wired for a Supabase-backed production architecture instead of local mock state.
 
-## Prerequisites
+## Stack
 
-- Node.js (v18 or higher recommended)
-- npm or yarn or pnpm
-- Git
+- React 18 + Vite + TypeScript
+- TanStack Query for server state
+- Supabase Auth for signup, login, and session persistence
+- Supabase Postgres for relational data
+- Supabase Storage for private case images
+- Supabase Edge Functions for privileged workflows:
+  - `process-case-analysis`
+  - `upsert-patient-link`
 
-## Setup
+## Domain Model
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/bilalkhantanoli/ortho_doc.git
-   cd ortho-mock-portal-main
-   ```
+- `profiles`: doctor and patient identities synced from `auth.users`
+- `doctor_patient_links`: active/inactive doctor-patient relationships
+- `appointments`: scheduled, completed, and cancelled visits
+- `case_records`: uploaded image cases and processing state
+- `analysis_runs`: AI outputs, metrics, failures, and partial responses
+- `brace_options`: seeded treatment options
+- `brace_preferences`: saved per-case brace selections
 
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-   or
-   ```bash
-   yarn install
-   ```
-   or
-   ```bash
-   pnpm install
-   ```
+The schema, constraints, indexes, RLS policies, and storage policies live in [supabase/migrations/20260422_initial_schema.sql](/C:/Users/spark/Desktop/ortho_doc/supabase/migrations/20260422_initial_schema.sql).
 
-## Run
+## Environment
 
-### Development Server
+Frontend app values live in [.env](/C:/Users/spark/Desktop/ortho_doc/.env):
 
-Start the development server:
 ```bash
+VITE_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+VITE_SUPABASE_ANON_KEY=YOUR_ANON_KEY
+VITE_SUPABASE_ANALYSIS_FUNCTION=process-case-analysis
+```
+
+Edge Function custom secrets live in [supabase/.env.functions](/C:/Users/spark/Desktop/ortho_doc/supabase/.env.functions):
+
+```bash
+CUSTOM_MODEL_URL=https://your-ngrok-url/your-endpoint
+CUSTOM_MODEL_API_KEY=
+```
+
+Important:
+
+- `Deno.env.get("SUPABASE_URL")`
+- `Deno.env.get("SUPABASE_ANON_KEY")`
+- `Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")`
+
+are provided automatically by hosted Supabase Edge Functions. Do not add `SUPABASE_*` names to `supabase/.env.functions`.
+
+## Supabase Setup
+
+1. Create a Supabase project.
+2. Run the SQL migration from `supabase/migrations/20260422_initial_schema.sql`.
+3. Upload the custom function secrets:
+
+```bash
+pnpm dlx supabase secrets set --env-file supabase/.env.functions
+```
+
+4. Deploy the Edge Functions in `supabase/functions/process-case-analysis` and `supabase/functions/upsert-patient-link`.
+5. Put the frontend `VITE_...` values into your local `.env`.
+
+## App Flows
+
+- Auth pages use Supabase Auth directly.
+- Doctor dashboards, patients, appointments, and uploads read/write live Supabase data.
+- Patient dashboards, cases, uploads, and customization screens are database-driven.
+- Image uploads go to private Storage, then the case id is sent to `process-case-analysis`.
+- The Edge Function downloads the image securely, sends it to your custom model endpoint, stores the structured result in `analysis_runs`, updates `case_records`, and upserts a brace recommendation.
+
+## Local Development
+
+```bash
+npm install
 npm run dev
 ```
-or
-```bash
-yarn dev
-```
-or
-```bash
-pnpm dev
-```
 
-The application will be available at `http://localhost:5173` (or the port shown in the terminal).
+## Verification Notes
 
-### Build
-
-Build for production:
-```bash
-npm run build
-```
-
-Build for development:
-```bash
-npm run build:dev
-```
-
-### Preview Production Build
-
-Preview the production build locally:
-```bash
-npm run preview
-```
-
-### Lint
-
-Run ESLint to check code quality:
-```bash
-npm run lint
-```
-
-## Git Workflow
-
-### Pushing Code
-
-1. **Check your current remote:**
-   ```bash
-   git remote -v
-   ```
-
-2. **If you need to authenticate, use one of these methods:**
-
-   **Option A: Use SSH (Recommended)**
-   - Generate an SSH key if you don't have one:
-     ```bash
-     ssh-keygen -t ed25519 -C "your_email@example.com"
-     ```
-   - Add your SSH key to GitHub (Settings → SSH and GPG keys)
-   - Change remote URL to SSH:
-     ```bash
-     git remote set-url origin git@github.com:bilalkhantanoli/ortho_doc.git
-     ```
-
-   **Option B: Use Personal Access Token**
-   - Go to GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic)
-   - Generate a new token with `repo` permissions
-   - When pushing, use the token as password:
-     ```bash
-     git push -u origin main
-     ```
-     (Username: `bilalkhantanoli`, Password: `your_token`)
-
-   **Option C: Update Git Credentials**
-   - Update your Git credentials:
-     ```bash
-     git config --global user.name "bilalkhantanoli"
-     git config --global user.email "your_email@example.com"
-     ```
-   - Clear cached credentials:
-     ```bash
-     git credential-manager-core erase
-     ```
-     (Windows) or
-     ```bash
-     git credential reject https://github.com
-     ```
-
-3. **Standard push workflow:**
-   ```bash
-   # Check status
-   git status
-   
-   # Add changes
-   git add .
-   
-   # Commit changes
-   git commit -m "Your commit message"
-   
-   # Push to remote
-   git push -u origin main
-   ```
-
-### Troubleshooting Permission Issues
-
-If you get a `403 Permission denied` error:
-- Make sure you're authenticated with the correct GitHub account (`bilalkhantanoli`)
-- Check if you have write access to the repository
-- Try using SSH instead of HTTPS
-- Verify your credentials are correct
-
-## Tech Stack
-
-- **React 18** - UI library
-- **TypeScript** - Type safety
-- **Vite** - Build tool and dev server
-- **shadcn/ui** - UI component library
-- **Tailwind CSS** - Styling
-- **React Router** - Routing
-- **TanStack Query** - Data fetching
-- **Zustand** - State management
+This workspace does not currently have installed dependencies or a local TypeScript toolchain, so `npm install`, `npm run build`, and `npm run lint` were not runnable here. Run them after adding the Supabase keys and installing dependencies.

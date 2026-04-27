@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Calendar as CalendarIcon, Clock } from 'lucide-react';
 import {
   Dialog,
@@ -15,53 +15,88 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import { useDoctorsQuery, useCreateAppointmentMutation, useUpdateAppointmentMutation } from '@/hooks/useAppointments';
+import { usePatientsQuery } from '@/hooks/usePatients';
+import { useAuth } from '@/hooks/useAuth';
+import { formatAppointmentType, type Appointment, type AppointmentType } from '@/lib/domain';
+import { APPOINTMENT_TIME_SLOTS, APPOINTMENT_TYPES } from '@/lib/constants';
 import { toast } from 'sonner';
+import { getErrorMessage } from '@/lib/errors';
 
 interface BookAppointmentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   role: 'doctor' | 'patient';
+  appointment?: Appointment | null;
 }
-
-const mockDoctors = [
-  { id: '1', name: 'Dr. Smith' },
-  { id: '2', name: 'Dr. Johnson' },
-  { id: '3', name: 'Dr. Williams' },
-];
-
-const timeSlots = [
-  '9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM',
-  '2:00 PM', '3:00 PM', '4:00 PM', '5:00 PM'
-];
-
-const appointmentTypes = [
-  'Consultation',
-  'Follow-up',
-  'Check-up',
-  'Treatment',
-  'Emergency'
-];
-
-export const BookAppointmentDialog = ({ open, onOpenChange, role }: BookAppointmentDialogProps) => {
+export const BookAppointmentDialog = ({ open, onOpenChange, role, appointment }: BookAppointmentDialogProps) => {
+  const { profile } = useAuth();
   const [date, setDate] = useState<Date>();
   const [selectedDoctor, setSelectedDoctor] = useState('');
+  const [selectedPatient, setSelectedPatient] = useState('');
   const [selectedTime, setSelectedTime] = useState('');
   const [appointmentType, setAppointmentType] = useState('');
+  const { data: doctors = [] } = useDoctorsQuery();
+  const { data: patients = [] } = usePatientsQuery(undefined, role === 'doctor');
+  const createAppointmentMutation = useCreateAppointmentMutation(role);
+  const updateAppointmentMutation = useUpdateAppointmentMutation(role);
 
-  const handleSubmit = () => {
-    if (!date || !selectedTime || !appointmentType || (role === 'patient' && !selectedDoctor)) {
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    if (!appointment) {
+      setDate(undefined);
+      setSelectedDoctor('');
+      setSelectedPatient('');
+      setSelectedTime('');
+      setAppointmentType('');
+      return;
+    }
+
+    const scheduled = new Date(appointment.scheduledAt);
+    setDate(scheduled);
+    setSelectedDoctor(appointment.doctorId);
+    setSelectedPatient(appointment.patientId);
+    setSelectedTime(scheduled.toISOString().slice(11, 16));
+    setAppointmentType(appointment.appointmentType);
+  }, [appointment, open]);
+
+  const handleSubmit = async () => {
+    if (!date || !selectedTime || !appointmentType || (role === 'patient' && !selectedDoctor) || (role === 'doctor' && !selectedPatient)) {
       toast.error('Please fill in all required fields');
       return;
     }
 
-    toast.success('Appointment booked successfully!');
-    onOpenChange(false);
-    
-    // Reset form
-    setDate(undefined);
-    setSelectedDoctor('');
-    setSelectedTime('');
-    setAppointmentType('');
+    const scheduledAt = new Date(`${format(date, 'yyyy-MM-dd')}T${selectedTime}:00`).toISOString();
+
+    try {
+      if (appointment) {
+        await updateAppointmentMutation.mutateAsync({
+          appointmentId: appointment.id,
+          scheduledAt,
+          appointmentType: appointmentType as AppointmentType,
+        });
+        toast.success('Appointment updated successfully.');
+      } else {
+        await createAppointmentMutation.mutateAsync({
+          doctorId: role === 'patient' ? selectedDoctor : profile?.id ?? '',
+          patientId: role === 'doctor' ? selectedPatient : profile?.id ?? '',
+          scheduledAt,
+          appointmentType: appointmentType as AppointmentType,
+        });
+        toast.success('Appointment booked successfully.');
+      }
+      onOpenChange(false);
+      setDate(undefined);
+      setSelectedDoctor('');
+      setSelectedPatient('');
+      setSelectedTime('');
+      setAppointmentType('');
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Unable to save appointment.'));
+    }
   };
 
   return (
@@ -83,9 +118,27 @@ export const BookAppointmentDialog = ({ open, onOpenChange, role }: BookAppointm
                   <SelectValue placeholder="Choose a doctor" />
                 </SelectTrigger>
                 <SelectContent>
-                  {mockDoctors.map((doctor) => (
+                  {doctors.map((doctor) => (
                     <SelectItem key={doctor.id} value={doctor.id}>
-                      {doctor.name}
+                      {doctor.fullName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {role === 'doctor' && (
+            <div className="space-y-2">
+              <Label htmlFor="patient">Select Patient *</Label>
+              <Select value={selectedPatient} onValueChange={setSelectedPatient}>
+                <SelectTrigger id="patient">
+                  <SelectValue placeholder="Choose a patient" />
+                </SelectTrigger>
+                <SelectContent>
+                  {patients.map((patient) => (
+                    <SelectItem key={patient.id} value={patient.id}>
+                      {patient.fullName}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -100,9 +153,9 @@ export const BookAppointmentDialog = ({ open, onOpenChange, role }: BookAppointm
                 <SelectValue placeholder="Select type" />
               </SelectTrigger>
               <SelectContent>
-                {appointmentTypes.map((type) => (
+                {APPOINTMENT_TYPES.map((type) => (
                   <SelectItem key={type} value={type}>
-                    {type}
+                    {formatAppointmentType(type)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -138,12 +191,12 @@ export const BookAppointmentDialog = ({ open, onOpenChange, role }: BookAppointm
 
           <div className="space-y-2">
             <Label htmlFor="time">Select Time *</Label>
-            <Select value={selectedTime} onValueChange={setSelectedTime}>
+              <Select value={selectedTime} onValueChange={setSelectedTime}>
               <SelectTrigger id="time">
                 <SelectValue placeholder="Choose a time slot" />
               </SelectTrigger>
               <SelectContent>
-                {timeSlots.map((time) => (
+                {APPOINTMENT_TIME_SLOTS.map((time) => (
                   <SelectItem key={time} value={time}>
                     <div className="flex items-center gap-2">
                       <Clock className="h-4 w-4" />
@@ -161,7 +214,7 @@ export const BookAppointmentDialog = ({ open, onOpenChange, role }: BookAppointm
             Cancel
           </Button>
           <Button onClick={handleSubmit}>
-            Book Appointment
+            {appointment ? 'Save Changes' : 'Book Appointment'}
           </Button>
         </DialogFooter>
       </DialogContent>

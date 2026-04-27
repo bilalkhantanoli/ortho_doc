@@ -4,52 +4,42 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import DashboardLayout from '@/components/DashboardLayout';
-import { mockPatients, mockCases, mockAppointments } from '@/lib/mockData';
 import { UploadXrayDialog } from '@/components/modals/UploadXrayDialog';
 import { BookAppointmentDialog } from '@/components/modals/BookAppointmentDialog';
+import { useDashboardQuery } from '@/hooks/useDashboard';
+import { useAuth } from '@/hooks/useAuth';
 
 const DoctorDashboard = () => {
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [showAppointmentDialog, setShowAppointmentDialog] = useState(false);
+  const { profile } = useAuth();
+  const { data, isLoading } = useDashboardQuery('doctor');
 
   const stats = [
     {
       title: 'Total Patients',
-      value: mockPatients.length,
+      value: data?.stats.totalPatients ?? 0,
       icon: Users,
-      change: '+12%',
       color: 'text-primary',
     },
     {
       title: 'Active Cases',
-      value: mockCases.filter((c) => c.status !== 'approved').length,
+      value: data?.stats.activeCases ?? 0,
       icon: FileText,
-      change: '+8%',
       color: 'text-secondary',
     },
     {
       title: 'Appointments',
-      value: mockAppointments.filter((a) => a.status === 'scheduled').length,
+      value: data?.stats.scheduledAppointments ?? 0,
       icon: Calendar,
-      change: '+5%',
       color: 'text-accent',
     },
     {
       title: 'Success Rate',
-      value: '94%',
+      value: `${data?.stats.successRate ?? 0}%`,
       icon: TrendingUp,
-      change: '+2%',
       color: 'text-success',
     },
-  ];
-
-  const chartData = [
-    { month: 'Jan', cases: 12 },
-    { month: 'Feb', cases: 19 },
-    { month: 'Mar', cases: 15 },
-    { month: 'Apr', cases: 25 },
-    { month: 'May', cases: 22 },
-    { month: 'Jun', cases: 30 },
   ];
 
   return (
@@ -58,7 +48,7 @@ const DoctorDashboard = () => {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
-            <p className="text-muted-foreground">Welcome back, Doctor!</p>
+            <p className="text-muted-foreground">Welcome back, {profile?.fullName ?? 'Doctor'}.</p>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" className="gap-2" onClick={() => setShowUploadDialog(true)}>
@@ -84,8 +74,8 @@ const DoctorDashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-foreground">{stat.value}</div>
-                <p className="text-xs text-success">
-                  {stat.change} from last month
+                <p className="text-xs text-muted-foreground">
+                  {isLoading ? 'Loading...' : 'Live from Supabase'}
                 </p>
               </CardContent>
             </Card>
@@ -100,7 +90,7 @@ const DoctorDashboard = () => {
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={chartData}>
+                <BarChart data={data?.casesByMonth ?? []}>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                   <XAxis dataKey="month" className="text-muted-foreground" />
                   <YAxis className="text-muted-foreground" />
@@ -117,28 +107,33 @@ const DoctorDashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {mockPatients.slice(0, 4).map((patient) => (
+                {data?.recentPatients?.map((patient) => (
                   <div
                     key={patient.id}
                     className="flex items-center justify-between rounded-lg border p-3"
                   >
                     <div>
-                      <p className="font-medium text-foreground">{patient.name}</p>
+                      <p className="font-medium text-foreground">{patient.fullName}</p>
                       <p className="text-sm text-muted-foreground">
-                        Last visit: {new Date(patient.lastVisit).toLocaleDateString()}
+                        {patient.lastAppointmentAt
+                          ? `Last visit: ${new Date(patient.lastAppointmentAt).toLocaleDateString()}`
+                          : 'No visits yet'}
                       </p>
                     </div>
                     <span
                       className={`rounded-full px-2 py-1 text-xs ${
-                        patient.status === 'active'
+                        patient.relationshipStatus === 'active'
                           ? 'bg-success/10 text-success'
                           : 'bg-muted text-muted-foreground'
                       }`}
                     >
-                      {patient.status}
+                      {patient.relationshipStatus}
                     </span>
                   </div>
                 ))}
+                {!isLoading && !data?.recentPatients?.length && (
+                  <p className="text-sm text-muted-foreground">No linked patients yet.</p>
+                )}
               </div>
             </CardContent>
           </Card>

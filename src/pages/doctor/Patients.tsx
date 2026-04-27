@@ -1,21 +1,21 @@
 import { useState } from 'react';
-import { Search, UserPlus } from 'lucide-react';
+import { Search, Trash2, UserPlus } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import DashboardLayout from '@/components/DashboardLayout';
-import { mockPatients } from '@/lib/mockData';
 import { AddPatientDialog } from '@/components/modals/AddPatientDialog';
+import { useDeletePatientMutation, usePatientsQuery, useUpdatePatientStatusMutation } from '@/hooks/usePatients';
+import { toast } from 'sonner';
+import { getErrorMessage } from '@/lib/errors';
 
 const Patients = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddPatientDialog, setShowAddPatientDialog] = useState(false);
-
-  const filteredPatients = mockPatients.filter((patient) =>
-    patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    patient.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const { data: patients = [], isLoading } = usePatientsQuery(searchTerm, true);
+  const updateStatusMutation = useUpdatePatientStatusMutation();
+  const deletePatientMutation = useDeletePatientMutation();
 
   return (
     <DashboardLayout role="doctor">
@@ -48,16 +48,16 @@ const Patients = () => {
 
         {/* Patients Grid */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filteredPatients.map((patient) => (
+          {patients.map((patient) => (
             <Card key={patient.id} className="transition-all hover:shadow-md">
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <CardTitle className="text-lg">{patient.name}</CardTitle>
+                    <CardTitle className="text-lg">{patient.fullName}</CardTitle>
                     <p className="text-sm text-muted-foreground">{patient.email}</p>
                   </div>
-                  <Badge variant={patient.status === 'active' ? 'default' : 'secondary'}>
-                    {patient.status}
+                  <Badge variant={patient.relationshipStatus === 'active' ? 'default' : 'secondary'}>
+                    {patient.relationshipStatus}
                   </Badge>
                 </div>
               </CardHeader>
@@ -65,24 +65,54 @@ const Patients = () => {
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Age:</span>
-                    <span className="font-medium text-foreground">{patient.age}</span>
+                    <span className="font-medium text-foreground">{patient.age ?? 'N/A'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Last Visit:</span>
+                    <span className="text-muted-foreground">Linked Cases:</span>
                     <span className="font-medium text-foreground">
-                      {new Date(patient.lastVisit).toLocaleDateString()}
+                      {patient.activeCaseCount}
                     </span>
                   </div>
                 </div>
-                <Button variant="outline" className="mt-4 w-full">
-                  View Details
-                </Button>
+                <div className="mt-4 flex gap-2">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={async () => {
+                      try {
+                        await updateStatusMutation.mutateAsync({
+                          relationshipId: patient.relationshipId,
+                          relationshipStatus: patient.relationshipStatus === 'active' ? 'inactive' : 'active',
+                        });
+                        toast.success('Patient status updated.');
+                      } catch (error) {
+                        toast.error(getErrorMessage(error, 'Unable to update patient.'));
+                      }
+                    }}
+                  >
+                    {patient.relationshipStatus === 'active' ? 'Deactivate' : 'Reactivate'}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={async () => {
+                      try {
+                        await deletePatientMutation.mutateAsync(patient.relationshipId);
+                        toast.success('Patient removed from your list.');
+                      } catch (error) {
+                        toast.error(getErrorMessage(error, 'Unable to remove patient.'));
+                      }
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           ))}
         </div>
 
-        {filteredPatients.length === 0 && (
+        {!isLoading && patients.length === 0 && (
           <Card>
             <CardContent className="py-12 text-center">
               <p className="text-muted-foreground">No patients found</p>

@@ -1,14 +1,14 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useMemo } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { CheckCircle, Download, Palette, ArrowLeft } from 'lucide-react';
+import { CheckCircle, Download, Palette, ArrowLeft, Loader2, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import DashboardLayout from '@/components/DashboardLayout';
-import { useAuthStore } from '@/lib/store';
-import { AnalysisResult as AnalysisResultType } from '@/lib/mockData';
+import { useCaseDetailQuery, useApproveCaseMutation } from '@/hooks/useCases';
 import { toast } from 'sonner';
+import { getErrorMessage } from '@/lib/errors';
 
 interface AnalysisResultProps {
   role: 'doctor' | 'patient';
@@ -16,35 +16,69 @@ interface AnalysisResultProps {
 
 const AnalysisResult = ({ role }: AnalysisResultProps) => {
   const navigate = useNavigate();
-  const user = useAuthStore((state) => state.user);
-  const [analysis, setAnalysis] = useState<AnalysisResultType | null>(null);
+  const { caseId } = useParams<{ caseId: string }>();
+  const { data: caseRecord, isLoading } = useCaseDetailQuery(caseId);
+  const approveCaseMutation = useApproveCaseMutation(role);
 
-  useEffect(() => {
-    const stored = sessionStorage.getItem('latestAnalysis');
-    if (stored) {
-      setAnalysis(JSON.parse(stored));
-    } else {
-      navigate(`/${role}/upload`);
-    }
-  }, [navigate, role]);
-
-  if (!analysis) return null;
-
-  const metrics = [
-    { label: 'Misalignment', value: analysis.misalignment, max: 100, color: 'bg-destructive' },
-    { label: 'Symmetry', value: analysis.symmetry, max: 100, color: 'bg-success' },
-    { label: 'Crowding', value: analysis.crowding, max: 100, color: 'bg-primary' },
-    { label: 'Overbite', value: analysis.overbite, max: 100, color: 'bg-secondary' },
-  ];
+  const metrics = useMemo(
+    () =>
+      caseRecord?.analysis
+        ? [
+            { label: 'Misalignment', value: caseRecord.analysis.metrics.misalignment ?? 0 },
+            { label: 'Symmetry', value: caseRecord.analysis.metrics.symmetry ?? 0 },
+            { label: 'Crowding', value: caseRecord.analysis.metrics.crowding ?? 0 },
+            { label: 'Overbite', value: caseRecord.analysis.metrics.overbite ?? 0 },
+          ]
+        : [],
+    [caseRecord],
+  );
 
   const handleDownload = () => {
+    if (!caseRecord) {
+      return;
+    }
+
+    const payload = {
+      caseId: caseRecord.id,
+      title: caseRecord.title,
+      status: caseRecord.status,
+      patient: caseRecord.patientName,
+      analysis: caseRecord.analysis,
+      bracePreference: caseRecord.bracePreference,
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `case-${caseRecord.id}.json`;
+    anchor.click();
+    URL.revokeObjectURL(url);
     toast.success('Report downloaded successfully!');
   };
 
-  const handleApprove = () => {
-    toast.success('Analysis approved!');
-    navigate(`/${role}/dashboard`);
+  const handleApprove = async () => {
+    if (!caseRecord) {
+      return;
+    }
+
+    try {
+      await approveCaseMutation.mutateAsync(caseRecord.id);
+      toast.success('Analysis approved.');
+      navigate(`/${role}/dashboard`);
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Unable to approve the case.'));
+    }
   };
+
+  if (isLoading || !caseRecord) {
+    return (
+      <DashboardLayout role={role}>
+        <div className="flex min-h-[50vh] items-center justify-center">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout role={role}>
@@ -64,7 +98,7 @@ const AnalysisResult = ({ role }: AnalysisResultProps) => {
           </div>
           <div>
             <h1 className="text-3xl font-bold text-foreground">Analysis Complete</h1>
-            <p className="text-muted-foreground">AI-powered orthodontic assessment</p>
+            <p className="text-muted-foreground">{caseRecord.title}</p>
           </div>
         </div>
 
@@ -74,13 +108,39 @@ const AnalysisResult = ({ role }: AnalysisResultProps) => {
             <CardTitle>Uploaded Image</CardTitle>
           </CardHeader>
           <CardContent>
-            <img
-              src={analysis.imageUrl}
-              alt="Dental scan"
-              className="w-full rounded-lg object-contain"
-            />
+            {caseRecord.imageUrl ? (
+              <img
+                src={caseRecord.imageUrl}
+                alt="Dental scan"
+                className="w-full rounded-lg object-contain"
+              />
+            ) : (
+              <p className="text-sm text-muted-foreground">Image preview unavailable.</p>
+            )}
           </CardContent>
         </Card>
+
+        {caseRecord.status === 'processing' && (
+          <Card className="border-l-4 border-l-primary">
+            <CardContent className="flex items-center gap-3 p-6">
+              <Loader2 className="h-5 w-5 animate-spin text-primary" />
+              <p className="text-sm text-muted-foreground">
+                The AI model is still processing this case. This screen refreshes automatically.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
+        {caseRecord.status === 'failed' && (
+          <Card className="border-l-4 border-l-destructive">
+            <CardContent className="flex items-center gap-3 p-6">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              <p className="text-sm text-muted-foreground">
+                {caseRecord.analysis?.failureReason ?? 'The analysis failed before a complete response was stored.'}
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Metrics */}
         <Card>
@@ -88,6 +148,9 @@ const AnalysisResult = ({ role }: AnalysisResultProps) => {
             <CardTitle>Analysis Metrics</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
+            {!caseRecord.analysis && (
+              <p className="text-sm text-muted-foreground">No completed analysis is available yet.</p>
+            )}
             {metrics.map((metric, index) => (
               <motion.div
                 key={metric.label}
@@ -114,9 +177,13 @@ const AnalysisResult = ({ role }: AnalysisResultProps) => {
           <CardContent className="space-y-3">
             <div className="flex items-center gap-2">
               <Palette className="h-5 w-5 text-primary" />
-              <p className="font-semibold text-foreground">{analysis.recommendedBrace}</p>
+              <p className="font-semibold text-foreground">
+                {caseRecord.bracePreference?.braceOptionName ?? caseRecord.analysis?.summary ?? 'Pending recommendation'}
+              </p>
             </div>
-            <p className="text-sm text-muted-foreground">{analysis.notes}</p>
+            <p className="text-sm text-muted-foreground">
+              {caseRecord.analysis?.notes ?? 'Once the AI response completes, clinical notes will appear here.'}
+            </p>
           </CardContent>
         </Card>
 
@@ -130,7 +197,7 @@ const AnalysisResult = ({ role }: AnalysisResultProps) => {
           )}
           <Button
             variant="outline"
-            onClick={() => navigate(`/${role}/customize`)}
+            onClick={() => navigate(`/${role}/customize/${caseRecord.id}`)}
             className="gap-2"
           >
             <Palette className="h-4 w-4" />

@@ -10,8 +10,15 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { analyzeImage } from '@/lib/mockData';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useDoctorsQuery } from '@/hooks/useAppointments';
+import { useAuth } from '@/hooks/useAuth';
+import { useCreateCaseMutation } from '@/hooks/useCases';
+import { usePatientsQuery } from '@/hooks/usePatients';
 import { toast } from 'sonner';
+import { getErrorMessage } from '@/lib/errors';
 
 interface UploadXrayDialogProps {
   open: boolean;
@@ -21,10 +28,17 @@ interface UploadXrayDialogProps {
 
 export const UploadXrayDialog = ({ open, onOpenChange, role }: UploadXrayDialogProps) => {
   const navigate = useNavigate();
+  const { profile } = useAuth();
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [title, setTitle] = useState('');
+  const [patientId, setPatientId] = useState('');
+  const [doctorId, setDoctorId] = useState('');
+  const createCaseMutation = useCreateCaseMutation(role);
+  const { data: patients = [] } = usePatientsQuery(undefined, role === 'doctor');
+  const { data: doctors = [] } = useDoctorsQuery();
 
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -39,7 +53,23 @@ export const UploadXrayDialog = ({ open, onOpenChange, role }: UploadXrayDialogP
   }, []);
 
   const handleUpload = async () => {
-    if (!file) return;
+    if (!file || !profile) return;
+    const resolvedPatientId = role === 'doctor' ? patientId : profile.id;
+
+    if (!title.trim()) {
+      toast.error('Please enter a case title.');
+      return;
+    }
+
+    if (!resolvedPatientId) {
+      toast.error('Please select a patient.');
+      return;
+    }
+
+    if (role === 'patient' && !doctorId) {
+      toast.error('Please select a doctor for review.');
+      return;
+    }
 
     setIsAnalyzing(true);
     setProgress(0);
@@ -55,25 +85,32 @@ export const UploadXrayDialog = ({ open, onOpenChange, role }: UploadXrayDialogP
     }, 300);
 
     try {
-      const result = await analyzeImage(file);
+      const caseId = await createCaseMutation.mutateAsync({
+        file,
+        title: title.trim(),
+        patientId: resolvedPatientId,
+        doctorId: role === 'doctor' ? profile.id : doctorId || null,
+      });
       clearInterval(progressInterval);
       setProgress(100);
 
       setTimeout(() => {
-        toast.success('Analysis complete!');
-        sessionStorage.setItem('latestAnalysis', JSON.stringify(result));
+        toast.success('Image uploaded. Analysis is running.');
         onOpenChange(false);
-        navigate(`/${role}/analysis-result`);
+        navigate(`/${role}/analysis-result/${caseId}`);
         
         // Reset state
         setFile(null);
         setPreview(null);
         setIsAnalyzing(false);
         setProgress(0);
+        setTitle('');
+        setPatientId('');
+        setDoctorId('');
       }, 500);
     } catch (error) {
       clearInterval(progressInterval);
-      toast.error('Analysis failed. Please try again.');
+      toast.error(getErrorMessage(error, 'Analysis failed. Please try again.'));
       setIsAnalyzing(false);
       setProgress(0);
     }
@@ -83,6 +120,9 @@ export const UploadXrayDialog = ({ open, onOpenChange, role }: UploadXrayDialogP
     setFile(null);
     setPreview(null);
     setProgress(0);
+    setTitle('');
+    setPatientId('');
+    setDoctorId('');
   };
 
   const handleClose = () => {
@@ -103,6 +143,53 @@ export const UploadXrayDialog = ({ open, onOpenChange, role }: UploadXrayDialogP
         </DialogHeader>
 
         <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="dialog-case-title">Case Title</Label>
+            <Input
+              id="dialog-case-title"
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              placeholder="Consultation X-ray"
+              disabled={isAnalyzing}
+            />
+          </div>
+
+          {role === 'doctor' && (
+            <div className="space-y-2">
+              <Label>Select Patient</Label>
+              <Select value={patientId} onValueChange={setPatientId} disabled={isAnalyzing}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose a patient" />
+                </SelectTrigger>
+                <SelectContent>
+                  {patients.map((patient) => (
+                    <SelectItem key={patient.id} value={patient.id}>
+                      {patient.fullName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {role === 'patient' && (
+            <div className="space-y-2">
+              <Label>Select Doctor</Label>
+              <Select value={doctorId} onValueChange={setDoctorId} disabled={isAnalyzing}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose a doctor for review" />
+                </SelectTrigger>
+                <SelectContent>
+                  {doctors.map((doctor) => (
+                    <SelectItem key={doctor.id} value={doctor.id}>
+                      {doctor.fullName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           {/* Upload Area */}
           <div className="relative">
             <input
@@ -171,7 +258,7 @@ export const UploadXrayDialog = ({ open, onOpenChange, role }: UploadXrayDialogP
                   )}
                   <div className="flex-1">
                     <p className="text-sm font-medium text-foreground">
-                      {progress < 100 ? 'Analyzing image...' : 'Analysis complete!'}
+                      {progress < 100 ? 'Uploading and dispatching analysis...' : 'Analysis queued'}
                     </p>
                     <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-muted">
                       <motion.div

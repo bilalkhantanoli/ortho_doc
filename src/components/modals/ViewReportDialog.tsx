@@ -1,4 +1,4 @@
-import { Download, FileText, Calendar, User } from 'lucide-react';
+import { Download, FileText, User } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -12,12 +12,12 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
-import type { Case } from '@/lib/mockData';
+import type { CaseRecord } from '@/lib/domain';
 
 interface ViewReportDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  caseData: Case | null;
+  caseData: CaseRecord | null;
 }
 
 export const ViewReportDialog = ({ open, onOpenChange, caseData }: ViewReportDialogProps) => {
@@ -72,7 +72,7 @@ export const ViewReportDialog = ({ open, onOpenChange, caseData }: ViewReportDia
               <div>
                 <p className="text-sm text-muted-foreground">Upload Date</p>
                 <p className="font-medium text-foreground">
-                  {new Date(caseData.uploadDate).toLocaleDateString('en-US', {
+                  {new Date(caseData.createdAt).toLocaleDateString('en-US', {
                     year: 'numeric',
                     month: 'long',
                     day: 'numeric'
@@ -93,33 +93,33 @@ export const ViewReportDialog = ({ open, onOpenChange, caseData }: ViewReportDia
                   <div>
                     <div className="mb-2 flex justify-between text-sm">
                       <span className="text-muted-foreground">Misalignment Score</span>
-                      <span className="font-medium text-foreground">{caseData.analysis.misalignment}%</span>
+                      <span className="font-medium text-foreground">{caseData.analysis.metrics.misalignment ?? 0}%</span>
                     </div>
-                    <Progress value={caseData.analysis.misalignment} className="h-2" />
+                    <Progress value={caseData.analysis.metrics.misalignment ?? 0} className="h-2" />
                   </div>
 
                   <div>
                     <div className="mb-2 flex justify-between text-sm">
                       <span className="text-muted-foreground">Symmetry Score</span>
-                      <span className="font-medium text-foreground">{caseData.analysis.symmetry}%</span>
+                      <span className="font-medium text-foreground">{caseData.analysis.metrics.symmetry ?? 0}%</span>
                     </div>
-                    <Progress value={caseData.analysis.symmetry} className="h-2" />
+                    <Progress value={caseData.analysis.metrics.symmetry ?? 0} className="h-2" />
                   </div>
 
                   <div>
                     <div className="mb-2 flex justify-between text-sm">
                       <span className="text-muted-foreground">Crowding Score</span>
-                      <span className="font-medium text-foreground">{caseData.analysis.crowding}%</span>
+                      <span className="font-medium text-foreground">{caseData.analysis.metrics.crowding ?? 0}%</span>
                     </div>
-                    <Progress value={caseData.analysis.crowding} className="h-2" />
+                    <Progress value={caseData.analysis.metrics.crowding ?? 0} className="h-2" />
                   </div>
 
                   <div>
                     <div className="mb-2 flex justify-between text-sm">
                       <span className="text-muted-foreground">Overbite Score</span>
-                      <span className="font-medium text-foreground">{caseData.analysis.overbite}%</span>
+                      <span className="font-medium text-foreground">{caseData.analysis.metrics.overbite ?? 0}%</span>
                     </div>
-                    <Progress value={caseData.analysis.overbite} className="h-2" />
+                    <Progress value={caseData.analysis.metrics.overbite ?? 0} className="h-2" />
                   </div>
                 </div>
               </div>
@@ -129,14 +129,16 @@ export const ViewReportDialog = ({ open, onOpenChange, caseData }: ViewReportDia
               {/* Recommendation */}
               <div className="rounded-lg bg-primary/5 p-4">
                 <h3 className="mb-2 font-semibold text-foreground">Recommended Treatment</h3>
-                <p className="text-lg font-medium text-primary">{caseData.analysis.recommendedBrace}</p>
+                <p className="text-lg font-medium text-primary">
+                  {caseData.bracePreference?.braceOptionName ?? caseData.analysis.summary ?? 'Pending recommendation'}
+                </p>
               </div>
 
               {/* Notes */}
               <div>
                 <h3 className="mb-2 font-semibold text-foreground">Clinical Notes</h3>
                 <div className="rounded-lg bg-muted p-4">
-                  <p className="text-sm text-foreground">{caseData.analysis.notes}</p>
+                  <p className="text-sm text-foreground">{caseData.analysis.notes ?? 'No notes provided.'}</p>
                 </div>
               </div>
             </>

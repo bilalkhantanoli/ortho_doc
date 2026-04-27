@@ -1,11 +1,15 @@
 import { useState } from 'react';
 import { Calendar as CalendarIcon, Clock, User } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import DashboardLayout from '@/components/DashboardLayout';
-import { mockAppointments } from '@/lib/mockData';
 import { BookAppointmentDialog } from '@/components/modals/BookAppointmentDialog';
+import { useAppointmentsQuery, useUpdateAppointmentStatusMutation } from '@/hooks/useAppointments';
+import type { Appointment } from '@/lib/domain';
+import { formatAppointmentType } from '@/lib/domain';
+import { toast } from 'sonner';
+import { getErrorMessage } from '@/lib/errors';
 
 interface AppointmentsProps {
   role: 'doctor' | 'patient';
@@ -13,6 +17,9 @@ interface AppointmentsProps {
 
 const Appointments = ({ role }: AppointmentsProps) => {
   const [showBookDialog, setShowBookDialog] = useState(false);
+  const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
+  const { data: appointments = [], isLoading } = useAppointmentsQuery(role);
+  const updateStatusMutation = useUpdateAppointmentStatusMutation(role);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -42,7 +49,7 @@ const Appointments = ({ role }: AppointmentsProps) => {
         </div>
 
         <div className="grid gap-4">
-          {mockAppointments.map((appointment) => (
+          {appointments.map((appointment) => (
             <Card key={appointment.id} className="transition-all hover:shadow-md">
               <CardContent className="p-6">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -52,7 +59,7 @@ const Appointments = ({ role }: AppointmentsProps) => {
                         <h3 className="font-semibold text-foreground">
                           {role === 'doctor' ? appointment.patientName : appointment.doctorName}
                         </h3>
-                        <p className="text-sm text-muted-foreground">{appointment.type}</p>
+                        <p className="text-sm text-muted-foreground">{formatAppointmentType(appointment.appointmentType)}</p>
                       </div>
                       <Badge className={getStatusColor(appointment.status)}>
                         {appointment.status}
@@ -63,7 +70,7 @@ const Appointments = ({ role }: AppointmentsProps) => {
                       <div className="flex items-center gap-2 text-muted-foreground">
                         <CalendarIcon className="h-4 w-4" />
                         <span>
-                          {new Date(appointment.date).toLocaleDateString('en-US', {
+                          {new Date(appointment.scheduledAt).toLocaleDateString('en-US', {
                             weekday: 'short',
                             year: 'numeric',
                             month: 'short',
@@ -73,7 +80,12 @@ const Appointments = ({ role }: AppointmentsProps) => {
                       </div>
                       <div className="flex items-center gap-2 text-muted-foreground">
                         <Clock className="h-4 w-4" />
-                        <span>{appointment.time}</span>
+                        <span>
+                          {new Date(appointment.scheduledAt).toLocaleTimeString([], {
+                            hour: 'numeric',
+                            minute: '2-digit',
+                          })}
+                        </span>
                       </div>
                       {role === 'patient' && (
                         <div className="flex items-center gap-2 text-muted-foreground">
@@ -87,10 +99,28 @@ const Appointments = ({ role }: AppointmentsProps) => {
                   <div className="flex gap-2">
                     {appointment.status === 'scheduled' && (
                       <>
-                        <Button variant="outline" size="sm">
+                        <Button variant="outline" size="sm" onClick={() => {
+                          setEditingAppointment(appointment);
+                          setShowBookDialog(true);
+                        }}>
                           Reschedule
                         </Button>
-                        <Button variant="outline" size="sm" className="text-destructive hover:text-destructive">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-destructive hover:text-destructive"
+                          onClick={async () => {
+                            try {
+                              await updateStatusMutation.mutateAsync({
+                                appointmentId: appointment.id,
+                                status: 'cancelled',
+                              });
+                              toast.success('Appointment cancelled.');
+                            } catch (error) {
+                              toast.error(getErrorMessage(error, 'Unable to cancel the appointment.'));
+                            }
+                          }}
+                        >
                           Cancel
                         </Button>
                       </>
@@ -107,7 +137,7 @@ const Appointments = ({ role }: AppointmentsProps) => {
           ))}
         </div>
 
-        {mockAppointments.length === 0 && (
+        {!isLoading && appointments.length === 0 && (
           <Card>
             <CardContent className="py-12 text-center">
               <CalendarIcon className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
@@ -121,8 +151,14 @@ const Appointments = ({ role }: AppointmentsProps) => {
       {/* Modals */}
       <BookAppointmentDialog
         open={showBookDialog}
-        onOpenChange={setShowBookDialog}
+        onOpenChange={(open) => {
+          setShowBookDialog(open);
+          if (!open) {
+            setEditingAppointment(null);
+          }
+        }}
         role={role}
+        appointment={editingAppointment}
       />
     </DashboardLayout>
   );
