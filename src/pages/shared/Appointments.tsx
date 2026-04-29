@@ -3,6 +3,16 @@ import { Calendar as CalendarIcon, Clock, User } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import DashboardLayout from '@/components/DashboardLayout';
 import { BookAppointmentDialog } from '@/components/modals/BookAppointmentDialog';
 import { useAppointmentsQuery, useUpdateAppointmentStatusMutation } from '@/hooks/useAppointments';
@@ -18,6 +28,7 @@ interface AppointmentsProps {
 const Appointments = ({ role }: AppointmentsProps) => {
   const [showBookDialog, setShowBookDialog] = useState(false);
   const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
+  const [appointmentToCancel, setAppointmentToCancel] = useState<Appointment | null>(null);
   const { data: appointments = [], isLoading } = useAppointmentsQuery(role);
   const updateStatusMutation = useUpdateAppointmentStatusMutation(role);
 
@@ -109,17 +120,7 @@ const Appointments = ({ role }: AppointmentsProps) => {
                           variant="outline"
                           size="sm"
                           className="text-destructive hover:text-destructive"
-                          onClick={async () => {
-                            try {
-                              await updateStatusMutation.mutateAsync({
-                                appointmentId: appointment.id,
-                                status: 'cancelled',
-                              });
-                              toast.success('Appointment cancelled.');
-                            } catch (error) {
-                              toast.error(getErrorMessage(error, 'Unable to cancel the appointment.'));
-                            }
-                          }}
+                          onClick={() => setAppointmentToCancel(appointment)}
                         >
                           Cancel
                         </Button>
@@ -160,6 +161,50 @@ const Appointments = ({ role }: AppointmentsProps) => {
         role={role}
         appointment={editingAppointment}
       />
+
+      <AlertDialog
+        open={Boolean(appointmentToCancel)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setAppointmentToCancel(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel appointment?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will cancel the appointment for{' '}
+              {appointmentToCancel
+                ? `${role === 'doctor' ? appointmentToCancel.patientName : appointmentToCancel.doctorName} on ${new Date(appointmentToCancel.scheduledAt).toLocaleDateString()}`
+                : 'this appointment'}
+              .
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setAppointmentToCancel(null)}>Keep appointment</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                if (!appointmentToCancel) return;
+
+                try {
+                  await updateStatusMutation.mutateAsync({
+                    appointmentId: appointmentToCancel.id,
+                    status: 'cancelled',
+                  });
+                  toast.success('Appointment cancelled.');
+                } catch (error) {
+                  toast.error(getErrorMessage(error, 'Unable to cancel the appointment.'));
+                } finally {
+                  setAppointmentToCancel(null);
+                }
+              }}
+            >
+              Cancel appointment
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 };
