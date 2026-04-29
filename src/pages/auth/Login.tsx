@@ -1,22 +1,19 @@
 import { useState } from 'react';
-import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowRight, Eye, EyeOff, Loader2, Sparkles, Stethoscope, User } from 'lucide-react';
+import { Eye, EyeOff, Loader2, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
-import type { UserRole } from '@/lib/domain';
 import { toast } from 'sonner';
 import { getErrorMessage } from '@/lib/errors';
 
 const Login = () => {
-  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { login, profile } = useAuth();
 
-  const [role, setRole] = useState<UserRole>((searchParams.get('role') as UserRole) || 'patient');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -29,7 +26,7 @@ const Login = () => {
     try {
       const nextProfile = await login(email, password);
       toast.success('Login successful!');
-      navigate(`/${nextProfile?.role ?? role}/dashboard`, { replace: true });
+      navigate(`/${nextProfile?.role ?? 'patient'}/dashboard`, { replace: true });
     } catch (error) {
       toast.error(getErrorMessage(error, 'Login failed. Please try again.'));
     } finally {
@@ -84,19 +81,9 @@ const Login = () => {
           >
             <Card className="border-border/70 bg-background/90 shadow-none">
               <CardHeader className="space-y-5">
-                <div className="flex justify-center gap-2">
-                  <Button type="button" variant={role === 'doctor' ? 'default' : 'outline'} size="sm" onClick={() => setRole('doctor')} className="gap-2">
-                    <Stethoscope className="h-4 w-4" />
-                    Doctor
-                  </Button>
-                  <Button type="button" variant={role === 'patient' ? 'default' : 'outline'} size="sm" onClick={() => setRole('patient')} className="gap-2">
-                    <User className="h-4 w-4" />
-                    Patient
-                  </Button>
-                </div>
                 <div className="space-y-2 text-center">
                   <CardTitle className="text-3xl tracking-tight">Welcome back</CardTitle>
-                  <CardDescription>Sign in to your {role} account</CardDescription>
+                  <CardDescription>Sign in to your doctor or patient account</CardDescription>
                 </div>
               </CardHeader>
 
@@ -149,7 +136,7 @@ const Login = () => {
 
                   <p className="text-center text-sm text-muted-foreground">
                     New here?{' '}
-                    <Link to={`/auth/register?role=${role}`} className="font-medium text-primary hover:underline">
+                    <Link to="/auth/register" className="font-medium text-primary hover:underline">
                       Create an account
                     </Link>
                   </p>

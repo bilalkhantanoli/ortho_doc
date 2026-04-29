@@ -142,17 +142,10 @@ const Landing = () => {
               </div>
 
               <div className="flex flex-col gap-3 sm:flex-row">
-                <Link to="/auth/login?role=doctor">
+                <Link to="/auth/login">
                   <Button size="lg" className="w-full gap-2 sm:w-auto">
                     <Stethoscope className="h-5 w-5" />
-                    Doctor Sign In
-                    <ArrowRight className="h-4 w-4" />
-                  </Button>
-                </Link>
-                <Link to="/auth/login?role=patient">
-                  <Button size="lg" variant="outline" className="w-full gap-2 sm:w-auto">
-                    <User className="h-5 w-5" />
-                    Patient Sign In
+                    Sign In
                     <ArrowRight className="h-4 w-4" />
                   </Button>
                 </Link>
