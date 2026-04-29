@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ReactNode, useMemo, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -9,10 +9,18 @@ import {
   FileText,
   LogOut,
   Menu,
+  UserCircle2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -23,11 +31,23 @@ const DashboardLayout = ({ children, role }: DashboardLayoutProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { profile, logout } = useAuth();
+  const [showAccountDialog, setShowAccountDialog] = useState(false);
 
   const handleLogout = async () => {
     await logout();
-    navigate('/');
+    navigate('/auth/login', { replace: true });
   };
+
+  const profileDetails = useMemo(
+    () => [
+      { label: 'Name', value: profile?.fullName ?? 'Unknown' },
+      { label: 'Email', value: profile?.email ?? 'Unknown' },
+      { label: 'Role', value: profile?.role ?? 'Unknown' },
+      { label: 'Age', value: profile?.age?.toString() ?? 'N/A' },
+      { label: 'Phone', value: profile?.phone ?? 'N/A' },
+    ],
+    [profile],
+  );
 
   const doctorLinks = [
     { href: '/doctor/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -50,18 +70,16 @@ const DashboardLayout = ({ children, role }: DashboardLayoutProps) => {
       {links.map((link) => {
         const isActive = location.pathname === link.href;
         return (
-          <Link key={link.href} to={link.href}>
-            <Button
-              variant={isActive ? 'default' : 'ghost'}
-              className="w-full justify-start gap-3"
-            >
+          <Button asChild key={link.href} variant={isActive ? 'default' : 'ghost'} className="w-full justify-start gap-3">
+            <Link to={link.href}>
               <link.icon className="h-4 w-4" />
               {link.label}
-            </Button>
-          </Link>
+            </Link>
+          </Button>
         );
       })}
       <Button
+        type="button"
         variant="ghost"
         className="w-full justify-start gap-3 text-destructive hover:bg-destructive/10 hover:text-destructive"
         onClick={handleLogout}
@@ -80,10 +98,14 @@ const DashboardLayout = ({ children, role }: DashboardLayoutProps) => {
           <h1 className="text-xl font-bold text-primary">OrthoDoc AI</h1>
         </div>
         <nav className="flex flex-col gap-2 p-4">
-          <div className="mb-4 rounded-lg bg-muted p-3">
+          <button
+            type="button"
+            onClick={() => setShowAccountDialog(true)}
+            className="mb-4 w-full rounded-lg bg-muted p-3 text-left transition-colors hover:bg-muted/80"
+          >
             <p className="text-sm font-medium text-foreground">{profile?.fullName}</p>
             <p className="text-xs text-muted-foreground">{profile?.email}</p>
-          </div>
+          </button>
           <NavLinks />
         </nav>
       </aside>
@@ -104,10 +126,14 @@ const DashboardLayout = ({ children, role }: DashboardLayoutProps) => {
                 <h1 className="text-xl font-bold text-primary">OrthoDoc AI</h1>
               </div>
               <nav className="flex flex-col gap-2 p-4">
-                <div className="mb-4 rounded-lg bg-muted p-3">
+                <button
+                  type="button"
+                  onClick={() => setShowAccountDialog(true)}
+                  className="mb-4 w-full rounded-lg bg-muted p-3 text-left transition-colors hover:bg-muted/80"
+                >
                   <p className="text-sm font-medium text-foreground">{profile?.fullName}</p>
                   <p className="text-xs text-muted-foreground">{profile?.email}</p>
-                </div>
+                </button>
                 <NavLinks />
               </nav>
             </SheetContent>
@@ -126,6 +152,33 @@ const DashboardLayout = ({ children, role }: DashboardLayoutProps) => {
           </motion.div>
         </main>
       </div>
+
+      <Dialog open={showAccountDialog} onOpenChange={setShowAccountDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserCircle2 className="h-5 w-5 text-primary" />
+              Account Info
+            </DialogTitle>
+            <DialogDescription>
+              Review the profile details linked to this session.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            {profileDetails.map((item) => (
+              <div key={item.label} className="flex items-center justify-between gap-4 rounded-lg border px-4 py-3">
+                <span className="text-sm text-muted-foreground">{item.label}</span>
+                <span className="text-sm font-medium text-foreground text-right">{item.value}</span>
+              </div>
+            ))}
+          </div>
+          <div className="flex justify-end">
+            <Button type="button" onClick={() => setShowAccountDialog(false)}>
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

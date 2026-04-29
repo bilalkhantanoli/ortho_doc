@@ -26,9 +26,9 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      await login(email, password);
+      const nextProfile = await login(email, password);
       toast.success('Login successful!');
-      navigate(`/${role}/dashboard`);
+      navigate(`/${nextProfile?.role ?? role}/dashboard`, { replace: true });
     } catch (error) {
       toast.error(getErrorMessage(error, 'Login failed. Please try again.'));
     } finally {

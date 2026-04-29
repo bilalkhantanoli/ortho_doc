@@ -29,7 +29,9 @@ export const useCreateAppointmentMutation = (role: UserRole) => {
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: QUERY_KEYS.appointments(role) }),
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.appointments(role === "doctor" ? "patient" : "doctor") }),
         queryClient.invalidateQueries({ queryKey: QUERY_KEYS.dashboard(role) }),
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.dashboard(role === "doctor" ? "patient" : "doctor") }),
       ]);
     },
   });
@@ -42,7 +44,12 @@ export const useUpdateAppointmentMutation = (role: UserRole) => {
     mutationFn: ({ appointmentId, scheduledAt, appointmentType, notes }: { appointmentId: string; scheduledAt: string; appointmentType: AppointmentType; notes?: string | null }) =>
       updateAppointment(appointmentId, { scheduledAt, appointmentType, notes }),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.appointments(role) });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.appointments(role) }),
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.appointments(role === "doctor" ? "patient" : "doctor") }),
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.dashboard(role) }),
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.dashboard(role === "doctor" ? "patient" : "doctor") }),
+      ]);
     },
   });
 };
@@ -54,7 +61,12 @@ export const useUpdateAppointmentStatusMutation = (role: UserRole) => {
     mutationFn: ({ appointmentId, status }: { appointmentId: string; status: "scheduled" | "completed" | "cancelled" }) =>
       updateAppointmentStatus(appointmentId, status),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.appointments(role) });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.appointments(role) }),
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.appointments(role === "doctor" ? "patient" : "doctor") }),
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.dashboard(role) }),
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.dashboard(role === "doctor" ? "patient" : "doctor") }),
+      ]);
     },
   });
 };

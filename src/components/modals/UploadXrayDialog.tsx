@@ -93,21 +93,17 @@ export const UploadXrayDialog = ({ open, onOpenChange, role }: UploadXrayDialogP
       });
       clearInterval(progressInterval);
       setProgress(100);
+      toast.success('Image uploaded. Analysis queued.');
+      onOpenChange(false);
+      navigate(`/${role}/analysis-result/${caseId}`);
 
-      setTimeout(() => {
-        toast.success('Image uploaded. Analysis is running.');
-        onOpenChange(false);
-        navigate(`/${role}/analysis-result/${caseId}`);
-        
-        // Reset state
-        setFile(null);
-        setPreview(null);
-        setIsAnalyzing(false);
-        setProgress(0);
-        setTitle('');
-        setPatientId('');
-        setDoctorId('');
-      }, 500);
+      setFile(null);
+      setPreview(null);
+      setIsAnalyzing(false);
+      setProgress(0);
+      setTitle('');
+      setPatientId('');
+      setDoctorId('');
     } catch (error) {
       clearInterval(progressInterval);
       toast.error(getErrorMessage(error, 'Analysis failed. Please try again.'));

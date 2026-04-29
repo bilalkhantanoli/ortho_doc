@@ -12,6 +12,7 @@ export const usePatientsQuery = (searchTerm?: string, enabled = true) =>
     queryKey: [...QUERY_KEYS.patients, searchTerm ?? ""],
     queryFn: () => listDoctorPatients(searchTerm),
     enabled,
+    staleTime: 0,
   });
 
 export const useCreatePatientMutation = () => {
@@ -20,7 +21,11 @@ export const useCreatePatientMutation = () => {
   return useMutation({
     mutationFn: createPatientRelationship,
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.patients });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.patients }),
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.dashboard("doctor") }),
+      ]);
+      await queryClient.refetchQueries({ queryKey: QUERY_KEYS.patients, type: "active" });
     },
   });
 };
@@ -32,7 +37,10 @@ export const useUpdatePatientStatusMutation = () => {
     mutationFn: ({ relationshipId, relationshipStatus }: { relationshipId: string; relationshipStatus: "active" | "inactive" }) =>
       updatePatientRelationship(relationshipId, relationshipStatus),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.patients });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.patients }),
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.dashboard("doctor") }),
+      ]);
     },
   });
 };
@@ -43,7 +51,11 @@ export const useDeletePatientMutation = () => {
   return useMutation({
     mutationFn: deletePatientRelationship,
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.patients });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.patients }),
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.dashboard("doctor") }),
+      ]);
+      await queryClient.refetchQueries({ queryKey: QUERY_KEYS.patients, type: "active" });
     },
   });
 };

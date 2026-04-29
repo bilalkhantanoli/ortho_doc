@@ -32,17 +32,22 @@ export const AddPatientDialog = ({ open, onOpenChange }: AddPatientDialogProps) 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name || !formData.email || !formData.age) {
+    const fullName = formData.name.trim();
+    const email = formData.email.trim();
+    const age = formData.age.trim();
+    const phone = formData.phone.trim();
+
+    if (!fullName || !email || !age) {
       toast.error('Please fill in all required fields');
       return;
     }
 
     try {
       await createPatientMutation.mutateAsync({
-        fullName: formData.name,
-        email: formData.email,
-        age: formData.age ? Number(formData.age) : null,
-        phone: formData.phone || null,
+        fullName,
+        email,
+        age: Number(age),
+        phone: phone || null,
       });
       toast.success('Patient linked successfully.');
       onOpenChange(false);
@@ -125,7 +130,7 @@ export const AddPatientDialog = ({ open, onOpenChange }: AddPatientDialogProps) 
               Cancel
             </Button>
             <Button type="submit" disabled={createPatientMutation.isPending}>
-              Add Patient
+              {createPatientMutation.isPending ? 'Adding...' : 'Add Patient'}
             </Button>
           </DialogFooter>
         </form>

@@ -61,10 +61,25 @@ export const getCurrentProfile = async (): Promise<Profile | null> => {
 };
 
 export const signIn = async (email: string, password: string) => {
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
+    const message = error.message.toLowerCase();
+    if (message.includes("email not confirmed")) {
+      throw new Error("Please confirm your email before logging in.");
+    }
+    if (message.includes("invalid login credentials") || message.includes("invalid credentials")) {
+      throw new Error("Invalid credentials.");
+    }
+
     throw error;
+  }
+
+  if (!data.session) {
+    const session = await getSession();
+    if (!session) {
+      throw new Error("Authentication session missing. Please try again.");
+    }
   }
 };
 
@@ -74,7 +89,7 @@ export const signUp = async (input: {
   password: string;
   role: UserRole;
 }) => {
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email: input.email,
     password: input.password,
     options: {
@@ -88,6 +103,8 @@ export const signUp = async (input: {
   if (error) {
     throw error;
   }
+
+  return data.session ?? null;
 };
 
 export const signOut = async () => {

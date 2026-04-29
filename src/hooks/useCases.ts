@@ -32,7 +32,9 @@ export const useCreateCaseMutation = (role: UserRole) => {
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: QUERY_KEYS.cases(role) }),
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.cases(role === "doctor" ? "patient" : "doctor") }),
         queryClient.invalidateQueries({ queryKey: QUERY_KEYS.dashboard(role) }),
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.dashboard(role === "doctor" ? "patient" : "doctor") }),
       ]);
     },
   });
@@ -47,6 +49,9 @@ export const useApproveCaseMutation = (role: UserRole) => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: QUERY_KEYS.caseDetail(caseId) }),
         queryClient.invalidateQueries({ queryKey: QUERY_KEYS.cases(role) }),
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.cases(role === "doctor" ? "patient" : "doctor") }),
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.dashboard(role) }),
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.dashboard(role === "doctor" ? "patient" : "doctor") }),
       ]);
     },
   });
@@ -58,7 +63,12 @@ export const useDeleteCaseMutation = (role: UserRole) => {
   return useMutation({
     mutationFn: ({ caseId, imagePath }: { caseId: string; imagePath: string }) => deleteCase(caseId, imagePath),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.cases(role) });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.cases(role) }),
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.cases(role === "doctor" ? "patient" : "doctor") }),
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.dashboard(role) }),
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.dashboard(role === "doctor" ? "patient" : "doctor") }),
+      ]);
     },
   });
 };

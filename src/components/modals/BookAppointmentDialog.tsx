@@ -64,7 +64,10 @@ export const BookAppointmentDialog = ({ open, onOpenChange, role, appointment }:
   }, [appointment, open]);
 
   const handleSubmit = async () => {
-    if (!date || !selectedTime || !appointmentType || (role === 'patient' && !selectedDoctor) || (role === 'doctor' && !selectedPatient)) {
+    const resolvedDoctorId = role === 'patient' ? selectedDoctor : profile?.id ?? '';
+    const resolvedPatientId = role === 'doctor' ? selectedPatient : profile?.id ?? '';
+
+    if (!date || !selectedTime || !appointmentType || !resolvedDoctorId || !resolvedPatientId) {
       toast.error('Please fill in all required fields');
       return;
     }
@@ -81,8 +84,8 @@ export const BookAppointmentDialog = ({ open, onOpenChange, role, appointment }:
         toast.success('Appointment updated successfully.');
       } else {
         await createAppointmentMutation.mutateAsync({
-          doctorId: role === 'patient' ? selectedDoctor : profile?.id ?? '',
-          patientId: role === 'doctor' ? selectedPatient : profile?.id ?? '',
+          doctorId: resolvedDoctorId,
+          patientId: resolvedPatientId,
           scheduledAt,
           appointmentType: appointmentType as AppointmentType,
         });
@@ -109,7 +112,13 @@ export const BookAppointmentDialog = ({ open, onOpenChange, role, appointment }:
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
+        <form
+          className="space-y-4 py-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void handleSubmit();
+          }}
+        >
           {role === 'patient' && (
             <div className="space-y-2">
               <Label htmlFor="doctor">Select Doctor *</Label>
@@ -191,7 +200,7 @@ export const BookAppointmentDialog = ({ open, onOpenChange, role, appointment }:
 
           <div className="space-y-2">
             <Label htmlFor="time">Select Time *</Label>
-              <Select value={selectedTime} onValueChange={setSelectedTime}>
+            <Select value={selectedTime} onValueChange={setSelectedTime}>
               <SelectTrigger id="time">
                 <SelectValue placeholder="Choose a time slot" />
               </SelectTrigger>
@@ -207,16 +216,20 @@ export const BookAppointmentDialog = ({ open, onOpenChange, role, appointment }:
               </SelectContent>
             </Select>
           </div>
-        </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button onClick={handleSubmit}>
-            {appointment ? 'Save Changes' : 'Book Appointment'}
-          </Button>
-        </DialogFooter>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={createAppointmentMutation.isPending || updateAppointmentMutation.isPending}>
+              {createAppointmentMutation.isPending || updateAppointmentMutation.isPending
+                ? 'Saving...'
+                : appointment
+                  ? 'Save Changes'
+                  : 'Book Appointment'}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

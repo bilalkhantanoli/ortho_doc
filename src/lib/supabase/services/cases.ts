@@ -125,17 +125,16 @@ export const createCaseAndAnalyze = async (input: {
 
     createdCaseId = data.id;
 
-    const { error: invokeError } = await supabase.functions.invoke(env.analysisFunctionName, {
-      body: { caseId: data.id },
-    });
-
-    if (invokeError) {
-      await supabase
-        .from("case_records")
-        .update({ status: "failed", error_message: invokeError.message })
-        .eq("id", data.id);
-      throw invokeError;
-    }
+    void supabase.functions
+      .invoke(env.analysisFunctionName, {
+        body: { caseId: data.id },
+      })
+      .catch(async (invokeError) => {
+        await supabase
+          .from("case_records")
+          .update({ status: "failed", error_message: invokeError.message })
+          .eq("id", data.id);
+      });
 
     return data.id;
   } catch (error) {

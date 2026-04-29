@@ -27,9 +27,18 @@ const Register = () => {
     setIsLoading(true);
 
     try {
-      await register({ fullName: name, email, password, role });
-      toast.success('Account created successfully. Check your email if confirmation is enabled.');
-      navigate(`/${role}/dashboard`);
+      const nextProfile = await register({ fullName: name, email, password, role });
+      setName('');
+      setEmail('');
+      setPassword('');
+
+      if (nextProfile) {
+        toast.success('Account created successfully.');
+        navigate(`/${nextProfile.role}/dashboard`, { replace: true });
+        return;
+      }
+
+      toast.success('Confirmation email sent');
     } catch (error) {
       toast.error(getErrorMessage(error, 'Registration failed. Please try again.'));
     } finally {
