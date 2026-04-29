@@ -41,6 +41,7 @@ export const useUpdatePatientStatusMutation = () => {
         queryClient.invalidateQueries({ queryKey: QUERY_KEYS.patients }),
         queryClient.invalidateQueries({ queryKey: QUERY_KEYS.dashboard("doctor") }),
       ]);
+      await queryClient.refetchQueries({ queryKey: QUERY_KEYS.patients, type: "active" });
     },
   });
 };

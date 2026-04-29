@@ -226,6 +226,21 @@ as $$
   );
 $$;
 
+create or replace function public.profile_has_role(p_profile_id uuid, p_role public.user_role)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.profiles
+    where id = p_profile_id
+      and role = p_role
+  );
+$$;
+
 create or replace function public.can_access_case(p_case_id uuid)
 returns boolean
 language sql
@@ -337,11 +352,10 @@ using (
   or exists (
     select 1
     from public.doctor_patient_links dpl
-    where dpl.relationship_status = 'active'
-      and (
-        (dpl.doctor_id = auth.uid() and dpl.patient_id = profiles.id)
-        or (dpl.patient_id = auth.uid() and dpl.doctor_id = profiles.id)
-      )
+    where (
+      (dpl.doctor_id = auth.uid() and dpl.patient_id = profiles.id)
+      or (dpl.patient_id = auth.uid() and dpl.doctor_id = profiles.id)
+    )
   )
 );
 
@@ -365,8 +379,8 @@ to authenticated
 using (doctor_id = auth.uid())
 with check (
   doctor_id = auth.uid()
-  and exists (select 1 from public.profiles p where p.id = doctor_id and p.role = 'doctor')
-  and exists (select 1 from public.profiles p where p.id = patient_id and p.role = 'patient')
+  and public.profile_has_role(doctor_id, 'doctor')
+  and public.profile_has_role(patient_id, 'patient')
 );
 
 create policy "appointments_read_participants"

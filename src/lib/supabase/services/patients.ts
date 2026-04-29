@@ -83,21 +83,27 @@ export const listDoctorPatients = async (searchTerm?: string) => {
     caseCountByPatient.set(item.patient_id, (caseCountByPatient.get(item.patient_id) ?? 0) + 1);
   });
 
-  const mapped = (data ?? []).map(
-    (row): PatientSummary => ({
-      id: row.patient.id,
-      email: row.patient.email,
-      fullName: row.patient.full_name,
-      role: "patient",
-      age: row.patient.age,
-      phone: row.patient.phone,
-      avatarPath: row.patient.avatar_path,
-      relationshipId: row.id,
-      relationshipStatus: row.relationship_status,
-      activeCaseCount: caseCountByPatient.get(row.patient.id) ?? 0,
-      lastAppointmentAt: lastAppointmentByPatient.get(row.patient.id) ?? null,
-    }),
-  );
+  const mapped = (data ?? []).flatMap((row): PatientSummary[] => {
+    if (!row.patient) {
+      return [];
+    }
+
+    return [
+      {
+        id: row.patient.id,
+        email: row.patient.email,
+        fullName: row.patient.full_name,
+        role: "patient",
+        age: row.patient.age,
+        phone: row.patient.phone,
+        avatarPath: row.patient.avatar_path,
+        relationshipId: row.id,
+        relationshipStatus: row.relationship_status,
+        activeCaseCount: caseCountByPatient.get(row.patient.id) ?? 0,
+        lastAppointmentAt: lastAppointmentByPatient.get(row.patient.id) ?? null,
+      },
+    ];
+  });
 
   if (!searchTerm) {
     return mapped;

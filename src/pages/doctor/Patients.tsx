@@ -20,6 +20,9 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
+const formatRelationshipStatus = (status: 'active' | 'inactive') =>
+  status === 'active' ? 'Active' : 'Deactivated';
+
 const Patients = () => {
   const [searchInput, setSearchInput] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -75,7 +78,7 @@ const Patients = () => {
                     <p className="text-sm text-muted-foreground">{patient.email}</p>
                   </div>
                   <Badge variant={patient.relationshipStatus === 'active' ? 'default' : 'secondary'}>
-                    {patient.relationshipStatus}
+                    {formatRelationshipStatus(patient.relationshipStatus)}
                   </Badge>
                 </div>
               </CardHeader>
@@ -107,7 +110,7 @@ const Patients = () => {
                       }
                     }}
                   >
-                    {patient.relationshipStatus === 'active' ? 'Deactivate' : 'Reactivate'}
+                    {patient.relationshipStatus === 'active' ? 'Deactivate' : 'Activate'}
                   </Button>
                   <Button
                     variant="outline"

@@ -9,6 +9,9 @@ import { BookAppointmentDialog } from '@/components/modals/BookAppointmentDialog
 import { useDashboardQuery } from '@/hooks/useDashboard';
 import { useAuth } from '@/hooks/useAuth';
 
+const formatRelationshipStatus = (status: 'active' | 'inactive') =>
+  status === 'active' ? 'Active' : 'Deactivated';
+
 const DoctorDashboard = () => {
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [showAppointmentDialog, setShowAppointmentDialog] = useState(false);
@@ -140,7 +143,7 @@ const DoctorDashboard = () => {
                           : 'bg-muted text-muted-foreground'
                       }`}
                     >
-                      {patient.relationshipStatus}
+                      {formatRelationshipStatus(patient.relationshipStatus)}
                     </span>
                   </div>
                 ))}
