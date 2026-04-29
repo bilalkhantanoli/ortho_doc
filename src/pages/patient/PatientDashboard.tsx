@@ -48,19 +48,37 @@ const PatientDashboard = () => {
   return (
     <DashboardLayout role="patient">
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">My Dashboard</h1>
-          <p className="text-muted-foreground">Track your orthodontic journey</p>
-        </div>
+        <Card className="overflow-hidden border-border/60 bg-gradient-to-r from-secondary/10 via-card to-primary/10">
+          <CardContent className="flex flex-col gap-5 p-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="space-y-2">
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-secondary">Patient workspace</p>
+              <h1 className="text-3xl font-semibold tracking-tight text-foreground md:text-4xl">My Dashboard</h1>
+              <p className="max-w-2xl text-muted-foreground">
+                Track your orthodontic journey, view case progress, and book appointments without digging through menus.
+              </p>
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button variant="outline" className="gap-2" onClick={() => setShowUploadDialog(true)}>
+                <Upload className="h-4 w-4" />
+                Upload Image
+              </Button>
+              <Button className="gap-2" onClick={() => setShowAppointmentDialog(true)}>
+                <Calendar className="h-4 w-4" />
+                Book Appointment
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Next Appointment */}
         {data?.nextAppointment && (
-          <Card className="border-l-4 border-l-primary bg-gradient-to-r from-primary/5 to-transparent">
-            <CardHeader>
+          <Card className="border-border/60 bg-gradient-to-r from-primary/5 to-transparent">
+            <CardHeader className="space-y-2">
               <CardTitle className="flex items-center gap-2">
                 <Calendar className="h-5 w-5 text-primary" />
                 Next Appointment
               </CardTitle>
+              <CardDescription>Your next scheduled visit is ready.</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -88,7 +106,7 @@ const PatientDashboard = () => {
         )}
 
         {/* Treatment Progress */}
-        <Card>
+          <Card>
           <CardHeader>
             <CardTitle>Treatment Progress</CardTitle>
             <CardDescription>You're making great progress!</CardDescription>
@@ -115,9 +133,9 @@ const PatientDashboard = () => {
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {quickActions.map((action) => {
               const content = (
-                <Card className="group h-full cursor-pointer transition-all hover:shadow-lg">
+                <Card className="group h-full cursor-pointer border-border/60 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
                   <CardContent className="flex flex-col items-center p-6 text-center">
-                    <div className={`mb-4 rounded-lg ${action.color} p-3`}>
+                    <div className={`mb-4 rounded-2xl ${action.color} p-3 shadow-md`}>
                       <action.icon className="h-6 w-6 text-white" />
                     </div>
                     <h3 className="mb-2 font-semibold text-foreground">{action.title}</h3>
@@ -140,7 +158,7 @@ const PatientDashboard = () => {
         </div>
       </div>
 
-      {/* Modals */}
+        {/* Modals */}
       <UploadXrayDialog
         open={showUploadDialog}
         onOpenChange={setShowUploadDialog}

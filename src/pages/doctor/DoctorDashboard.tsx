@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Users, FileText, Calendar, TrendingUp, Upload } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import DashboardLayout from '@/components/DashboardLayout';
@@ -45,37 +45,48 @@ const DoctorDashboard = () => {
   return (
     <DashboardLayout role="doctor">
       <div className="space-y-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
-            <p className="text-muted-foreground">Welcome back, {profile?.fullName ?? 'Doctor'}.</p>
-          </div>
-          <div className="flex gap-2">
-            <Button variant="outline" className="gap-2" onClick={() => setShowUploadDialog(true)}>
-              <Upload className="h-4 w-4" />
-              Upload X-ray
-            </Button>
-            <Button className="gap-2" onClick={() => setShowAppointmentDialog(true)}>
-              <Calendar className="h-4 w-4" />
-              New Appointment
-            </Button>
-          </div>
-        </div>
+        <Card className="overflow-hidden border-border/60 bg-gradient-to-r from-primary/10 via-card to-secondary/10">
+          <CardContent className="flex flex-col gap-6 p-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="space-y-3">
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary">Doctor workspace</p>
+              <div>
+                <h1 className="text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
+                  Welcome back, {profile?.fullName ?? 'Doctor'}.
+                </h1>
+                <p className="mt-2 max-w-2xl text-muted-foreground">
+                  Review patients, dispatch analyses, and keep appointments moving from one clinical command center.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button variant="outline" className="gap-2" onClick={() => setShowUploadDialog(true)}>
+                <Upload className="h-4 w-4" />
+                Upload X-ray
+              </Button>
+              <Button className="gap-2" onClick={() => setShowAppointmentDialog(true)}>
+                <Calendar className="h-4 w-4" />
+                New Appointment
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Stats Grid */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {stats.map((stat) => (
-            <Card key={stat.title} className="transition-all hover:shadow-md">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  {stat.title}
-                </CardTitle>
-                <stat.icon className={`h-4 w-4 ${stat.color}`} />
+            <Card key={stat.title} className="overflow-hidden border-border/60 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
+              <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
+                <div>
+                  <CardDescription>{stat.title}</CardDescription>
+                  <CardTitle className="mt-2 text-3xl">{stat.value}</CardTitle>
+                </div>
+                <div className="rounded-2xl bg-muted p-3">
+                  <stat.icon className={`h-5 w-5 ${stat.color}`} />
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-foreground">{stat.value}</div>
                 <p className="text-xs text-muted-foreground">
-                  {isLoading ? 'Loading...' : 'Live from Supabase'}
+                  {isLoading ? 'Refreshing live data...' : 'Live from Supabase'}
                 </p>
               </CardContent>
             </Card>
@@ -84,11 +95,12 @@ const DoctorDashboard = () => {
 
         {/* Charts */}
         <div className="grid gap-6 lg:grid-cols-2">
-          <Card>
-            <CardHeader>
+          <Card className="border-border/60">
+            <CardHeader className="space-y-2">
               <CardTitle>Cases Overview</CardTitle>
+              <CardDescription>Monthly case volume and activity trend.</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="h-[340px]">
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={data?.casesByMonth ?? []}>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
@@ -101,16 +113,17 @@ const DoctorDashboard = () => {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
+          <Card className="border-border/60">
+            <CardHeader className="space-y-2">
               <CardTitle>Recent Patients</CardTitle>
+              <CardDescription>Recent patient activity and visit status.</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 {data?.recentPatients?.map((patient) => (
                   <div
                     key={patient.id}
-                    className="flex items-center justify-between rounded-lg border p-3"
+                    className="flex items-center justify-between rounded-2xl border bg-muted/30 p-4 transition-colors hover:bg-muted/50"
                   >
                     <div>
                       <p className="font-medium text-foreground">{patient.fullName}</p>
@@ -132,7 +145,9 @@ const DoctorDashboard = () => {
                   </div>
                 ))}
                 {!isLoading && !data?.recentPatients?.length && (
-                  <p className="text-sm text-muted-foreground">No linked patients yet.</p>
+                  <p className="rounded-2xl border border-dashed p-6 text-center text-sm text-muted-foreground">
+                    No linked patients yet.
+                  </p>
                 )}
               </div>
             </CardContent>
