@@ -9,6 +9,6 @@ const requiredEnv = (value: string | undefined, key: string) => {
 export const env = {
   supabaseUrl: requiredEnv(import.meta.env.VITE_SUPABASE_URL, "VITE_SUPABASE_URL"),
   supabaseAnonKey: requiredEnv(import.meta.env.VITE_SUPABASE_ANON_KEY, "VITE_SUPABASE_ANON_KEY"),
-  analysisFunctionName:
-    import.meta.env.VITE_SUPABASE_ANALYSIS_FUNCTION ?? "process-case-analysis",
+  gradioSpaceUrl: import.meta.env.VITE_GRADIO_SPACE_URL ?? "",
+  gradioApiName: import.meta.env.VITE_GRADIO_API_NAME ?? "/predict_landmarks",
 };

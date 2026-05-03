@@ -1,7 +1,7 @@
 import { ALLOWED_IMAGE_TYPES, MAX_UPLOAD_BYTES, STORAGE_BUCKETS } from "@/lib/constants";
-import { env } from "@/lib/env";
 import { mapCaseDetail, type CaseRecord, type UserRole } from "@/lib/domain";
 import { supabase } from "@/lib/supabase/client";
+import { analyzeLandmarkXray } from "@/lib/gradio";
 import { buildCaseImagePath, createSignedImageUrl, removeStoredImage } from "@/lib/supabase/storage";
 
 const validateImage = (file: File) => {
@@ -125,16 +125,46 @@ export const createCaseAndAnalyze = async (input: {
 
     createdCaseId = data.id;
 
-    void supabase.functions
-      .invoke(env.analysisFunctionName, {
-        body: { caseId: data.id },
+    const landmarkResult = await analyzeLandmarkXray(input.file);
+    const analysisSummary =
+      landmarkResult.diagnosis ?? (landmarkResult.rawText || "Landmark analysis completed");
+
+    const { data: analysisRun, error: analysisInsertError } = await supabase
+      .from("analysis_runs")
+      .insert({
+        case_id: data.id,
+        requested_by: user.id,
+        status: "completed",
+        provider: "gradio",
+        model_name: "predict_landmarks",
+        summary: analysisSummary,
+        notes: landmarkResult.rawText,
+        metrics: {
+          sna: landmarkResult.metrics.sna,
+          snb: landmarkResult.metrics.snb,
+          anb: landmarkResult.metrics.anb,
+        },
+        raw_response: landmarkResult.rawResponse as any,
+        completed_at: new Date().toISOString(),
       })
-      .catch(async (invokeError) => {
-        await supabase
-          .from("case_records")
-          .update({ status: "failed", error_message: invokeError.message })
-          .eq("id", data.id);
-      });
+      .select("id")
+      .single();
+
+    if (analysisInsertError) {
+      throw analysisInsertError;
+    }
+
+    const { error: caseUpdateError } = await supabase
+      .from("case_records")
+      .update({
+        status: "analyzed",
+        latest_analysis_id: analysisRun.id,
+      })
+      .eq("id", data.id);
+
+    if (caseUpdateError) {
+      throw caseUpdateError;
+    }
 
     return data.id;
   } catch (error) {

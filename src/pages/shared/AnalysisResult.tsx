@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useCaseDetailQuery, useApproveCaseMutation } from '@/hooks/useCases';
+import { findImageUrl, jsonToText, parseLandmarkDiagnosis } from '@/lib/landmark';
 import { toast } from 'sonner';
 import { getErrorMessage } from '@/lib/errors';
 
@@ -24,12 +25,39 @@ const AnalysisResult = ({ role }: AnalysisResultProps) => {
     () =>
       caseRecord?.analysis
         ? [
-            { label: 'Misalignment', value: caseRecord.analysis.metrics.misalignment ?? 0 },
-            { label: 'Symmetry', value: caseRecord.analysis.metrics.symmetry ?? 0 },
-            { label: 'Crowding', value: caseRecord.analysis.metrics.crowding ?? 0 },
-            { label: 'Overbite', value: caseRecord.analysis.metrics.overbite ?? 0 },
+            {
+              label: 'SNA',
+              value: caseRecord.analysis.metrics.sna ?? caseRecord.analysis.metrics.misalignment ?? 0,
+            },
+            {
+              label: 'SNB',
+              value: caseRecord.analysis.metrics.snb ?? caseRecord.analysis.metrics.symmetry ?? 0,
+            },
+            {
+              label: 'ANB',
+              value: caseRecord.analysis.metrics.anb ?? caseRecord.analysis.metrics.crowding ?? 0,
+            },
+            {
+              label: 'Confidence',
+              value: caseRecord.analysis.metrics.confidence ?? caseRecord.analysis.metrics.overbite ?? 0,
+            },
           ]
         : [],
+    [caseRecord],
+  );
+
+  const rawAnalysisText = useMemo(
+    () => jsonToText(caseRecord?.analysis?.rawResponse ?? caseRecord?.analysis?.notes ?? ''),
+    [caseRecord],
+  );
+
+  const diagnosis = useMemo(
+    () => parseLandmarkDiagnosis(rawAnalysisText) ?? caseRecord?.analysis?.summary ?? null,
+    [caseRecord, rawAnalysisText],
+  );
+
+  const annotatedImageUrl = useMemo(
+    () => caseRecord?.analysis?.resultImageUrl ?? findImageUrl(caseRecord?.analysis?.rawResponse),
     [caseRecord],
   );
 
@@ -120,6 +148,21 @@ const AnalysisResult = ({ role }: AnalysisResultProps) => {
           </CardContent>
         </Card>
 
+        {annotatedImageUrl && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Gradio Result Image</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <img
+                src={annotatedImageUrl}
+                alt="Gradio analysis result"
+                className="w-full rounded-lg object-contain"
+              />
+            </CardContent>
+          </Card>
+        )}
+
         {caseRecord.status === 'processing' && (
           <Card className="border-l-4 border-l-primary">
             <CardContent className="flex items-center gap-3 p-6">
@@ -145,7 +188,7 @@ const AnalysisResult = ({ role }: AnalysisResultProps) => {
         {/* Metrics */}
         <Card>
           <CardHeader>
-            <CardTitle>Analysis Metrics</CardTitle>
+            <CardTitle>Landmark Measurements</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             {!caseRecord.analysis && (
@@ -161,11 +204,18 @@ const AnalysisResult = ({ role }: AnalysisResultProps) => {
               >
                 <div className="flex justify-between text-sm">
                   <span className="font-medium text-foreground">{metric.label}</span>
-                  <span className="text-muted-foreground">{metric.value}%</span>
+                  <span className="text-muted-foreground">{metric.value.toFixed(2)}</span>
                 </div>
-                <Progress value={metric.value} className="h-2" />
+                <Progress value={Math.max(0, Math.min(metric.value, 100))} className="h-2" />
               </motion.div>
             ))}
+
+            {diagnosis && (
+              <div className="rounded-lg border bg-muted/20 p-4">
+                <p className="text-sm text-muted-foreground">Diagnosis</p>
+                <p className="mt-1 text-lg font-semibold text-foreground">{diagnosis}</p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -178,11 +228,11 @@ const AnalysisResult = ({ role }: AnalysisResultProps) => {
             <div className="flex items-center gap-2">
               <Palette className="h-5 w-5 text-primary" />
               <p className="font-semibold text-foreground">
-                {caseRecord.bracePreference?.braceOptionName ?? caseRecord.analysis?.summary ?? 'Pending recommendation'}
+                {caseRecord.bracePreference?.braceOptionName ?? diagnosis ?? caseRecord.analysis?.summary ?? 'Pending recommendation'}
               </p>
             </div>
             <p className="text-sm text-muted-foreground">
-              {caseRecord.analysis?.notes ?? 'Once the AI response completes, clinical notes will appear here.'}
+              {rawAnalysisText || 'Once the AI response completes, clinical notes will appear here.'}
             </p>
           </CardContent>
         </Card>

@@ -218,6 +218,7 @@ export type Database = {
           analysis_id: string | null;
           analysis_metrics: Json | null;
           analysis_notes: string | null;
+          analysis_raw_response: Json | null;
           analysis_status: string | null;
           analysis_summary: string | null;
           brace_color_hex: string | null;

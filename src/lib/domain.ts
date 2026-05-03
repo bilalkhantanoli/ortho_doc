@@ -1,4 +1,5 @@
 import type { Json } from "@/lib/database.types";
+import { findImageUrl } from "@/lib/landmark";
 
 export type UserRole = "doctor" | "patient";
 export type CaseStatus = "uploading" | "processing" | "analyzed" | "approved" | "failed";
@@ -66,6 +67,9 @@ export interface AnalysisMetrics {
   crowding: number | null;
   overbite: number | null;
   confidence: number | null;
+  sna: number | null;
+  snb: number | null;
+  anb: number | null;
 }
 
 export interface Analysis {
@@ -76,6 +80,8 @@ export interface Analysis {
   metrics: AnalysisMetrics;
   failureReason: string | null;
   completedAt: string | null;
+  rawResponse: Json | null;
+  resultImageUrl: string | null;
 }
 
 export interface CaseRecord {
@@ -122,6 +128,9 @@ const asMetrics = (value: Json | null | undefined): AnalysisMetrics => {
     crowding: typeof metrics.crowding === "number" ? metrics.crowding : null,
     overbite: typeof metrics.overbite === "number" ? metrics.overbite : null,
     confidence: typeof metrics.confidence === "number" ? metrics.confidence : null,
+    sna: typeof metrics.sna === "number" ? metrics.sna : null,
+    snb: typeof metrics.snb === "number" ? metrics.snb : null,
+    anb: typeof metrics.anb === "number" ? metrics.anb : null,
   };
 };
 
@@ -152,9 +161,10 @@ export const mapCaseDetail = (
     analysis_status: AnalysisStatus | null;
     analysis_summary: string | null;
     analysis_notes: string | null;
-    analysis_metrics: Json | null;
-    analysis_failure_reason: string | null;
-    analysis_completed_at: string | null;
+  analysis_metrics: Json | null;
+  analysis_failure_reason: string | null;
+  analysis_completed_at: string | null;
+  analysis_raw_response: Json | null;
   },
   signedUrl: string | null,
 ): CaseRecord => ({
@@ -191,6 +201,8 @@ export const mapCaseDetail = (
         metrics: asMetrics(row.analysis_metrics),
         failureReason: row.analysis_failure_reason,
         completedAt: row.analysis_completed_at,
+        rawResponse: row.analysis_raw_response,
+        resultImageUrl: findImageUrl(row.analysis_raw_response),
       }
     : null,
 });
