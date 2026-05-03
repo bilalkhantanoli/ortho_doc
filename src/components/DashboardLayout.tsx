@@ -60,6 +60,7 @@ const DashboardLayout = ({ children, role }: DashboardLayoutProps) => {
     { href: '/patient/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/patient/upload', label: 'Upload', icon: Upload },
     { href: '/patient/cases', label: 'My Cases', icon: FileText },
+    { href: '/patient/reports', label: 'Reports', icon: FileText },
     { href: '/patient/appointments', label: 'Appointments', icon: Calendar },
   ];
 

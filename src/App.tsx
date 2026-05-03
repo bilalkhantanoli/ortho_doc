@@ -11,6 +11,7 @@ import Register from "./pages/auth/Register";
 import DoctorDashboard from "./pages/doctor/DoctorDashboard";
 import Patients from "./pages/doctor/Patients";
 import PatientDashboard from "./pages/patient/PatientDashboard";
+import Reports from "./pages/patient/Reports";
 import Cases from "./pages/patient/Cases";
 import Upload from "./pages/shared/Upload";
 import AnalysisResult from "./pages/shared/AnalysisResult";
@@ -57,6 +58,7 @@ const App = () => (
           
           {/* Patient Routes */}
           <Route path="/patient/dashboard" element={<ProtectedRoute role="patient"><PatientDashboard /></ProtectedRoute>} />
+          <Route path="/patient/reports" element={<ProtectedRoute role="patient"><Reports /></ProtectedRoute>} />
           <Route path="/patient/upload" element={<ProtectedRoute role="patient"><Upload role="patient" /></ProtectedRoute>} />
           <Route path="/patient/analysis-result/:caseId" element={<ProtectedRoute role="patient"><AnalysisResult role="patient" /></ProtectedRoute>} />
           <Route path="/patient/cases" element={<ProtectedRoute role="patient"><Cases /></ProtectedRoute>} />

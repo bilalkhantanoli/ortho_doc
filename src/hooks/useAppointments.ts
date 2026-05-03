@@ -2,12 +2,15 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { QUERY_KEYS } from "@/lib/constants";
 import {
   createAppointment,
+  getDoctorBookedSlots,
   listAppointments,
   listDoctors,
   updateAppointment,
   updateAppointmentStatus,
 } from "@/lib/supabase/services/appointments";
+import { APPOINTMENT_TIME_SLOTS } from "@/lib/constants";
 import type { AppointmentType, UserRole } from "@/lib/domain";
+import { format } from "date-fns";
 
 export const useAppointmentsQuery = (role: UserRole) =>
   useQuery({
@@ -19,6 +22,22 @@ export const useDoctorsQuery = () =>
   useQuery({
     queryKey: QUERY_KEYS.doctors,
     queryFn: listDoctors,
+  });
+
+export const useDoctorAvailabilityQuery = (doctorId?: string, date?: Date) =>
+  useQuery({
+    queryKey: ["doctor-availability", doctorId ?? "", date ? format(date, "yyyy-MM-dd") : ""],
+    queryFn: async () => {
+      if (!doctorId || !date) {
+        return { bookedSlots: [] as string[], availableSlots: APPOINTMENT_TIME_SLOTS as readonly string[] };
+      }
+
+      const bookedSlots = await getDoctorBookedSlots(doctorId, format(date, "yyyy-MM-dd"));
+      const availableSlots = APPOINTMENT_TIME_SLOTS.filter((slot) => !bookedSlots.includes(slot));
+
+      return { bookedSlots, availableSlots };
+    },
+    enabled: Boolean(doctorId && date),
   });
 
 export const useCreateAppointmentMutation = (role: UserRole) => {

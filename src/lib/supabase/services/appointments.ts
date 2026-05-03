@@ -72,6 +72,22 @@ export const createAppointment = async (input: {
 }) => {
   const user = await getCurrentUser();
 
+  const { data: conflictingAppointment, error: conflictError } = await supabase
+    .from("appointments")
+    .select("id")
+    .eq("doctor_id", input.doctorId)
+    .eq("scheduled_at", input.scheduledAt)
+    .eq("status", "scheduled")
+    .maybeSingle();
+
+  if (conflictError) {
+    throw conflictError;
+  }
+
+  if (conflictingAppointment) {
+    throw new Error("This time slot is already booked. Please choose another availability.");
+  }
+
   const { error } = await supabase.from("appointments").insert({
     doctor_id: input.doctorId,
     patient_id: input.patientId,
@@ -90,6 +106,33 @@ export const updateAppointment = async (
   appointmentId: string,
   input: { scheduledAt: string; appointmentType: AppointmentType; notes?: string | null },
 ) => {
+  const { data: existingAppointment, error: existingError } = await supabase
+    .from("appointments")
+    .select("doctor_id")
+    .eq("id", appointmentId)
+    .single();
+
+  if (existingError) {
+    throw existingError;
+  }
+
+  const { data: conflictingAppointment, error: conflictError } = await supabase
+    .from("appointments")
+    .select("id")
+    .eq("doctor_id", existingAppointment.doctor_id)
+    .eq("scheduled_at", input.scheduledAt)
+    .eq("status", "scheduled")
+    .neq("id", appointmentId)
+    .maybeSingle();
+
+  if (conflictError) {
+    throw conflictError;
+  }
+
+  if (conflictingAppointment) {
+    throw new Error("This time slot is already booked. Please choose another availability.");
+  }
+
   const { error } = await supabase
     .from("appointments")
     .update({
@@ -131,4 +174,17 @@ export const listDoctors = async () => {
     fullName: doctor.full_name,
     email: doctor.email,
   }));
+};
+
+export const getDoctorBookedSlots = async (doctorId: string, day: string) => {
+  const { data, error } = await supabase.rpc("get_doctor_booked_slots", {
+    p_doctor: doctorId,
+    p_day: day,
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []) as string[];
 };
