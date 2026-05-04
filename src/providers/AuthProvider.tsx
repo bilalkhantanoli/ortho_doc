@@ -16,6 +16,8 @@ import {
   signIn,
   signOut,
   signUp,
+  sendPasswordResetEmail,
+  updatePassword,
   updateProfile,
 } from "@/lib/supabase/services/auth";
 
@@ -31,6 +33,8 @@ interface AuthContextValue {
     password: string;
     role: UserRole;
   }) => Promise<Profile | null>;
+  requestPasswordReset: (email: string) => Promise<void>;
+  resetPassword: (password: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   saveProfile: (input: { fullName: string; age: number | null; phone: string | null }) => Promise<void>;
@@ -42,6 +46,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const passwordResetRedirect =
+    typeof window === "undefined" ? "" : `${window.location.origin}/auth/reset-password`;
 
   const waitForProfile = async () => {
     for (let attempt = 0; attempt < 10; attempt += 1) {
@@ -116,61 +122,67 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const value = useMemo<AuthContextValue>(
-      () => ({
-        session,
-        profile,
-        isAuthenticated: Boolean(session && profile),
-        isLoading,
-        login: async (email, password) => {
-          setIsLoading(true);
-          try {
-            await signIn(email, password);
-            const nextSession = await getSession();
-            setSession(nextSession);
-            const nextProfile = await waitForProfile();
-            if (!nextProfile) {
-              throw new Error("Unable to load your profile. Please try again.");
-            }
-            setProfile(nextProfile);
-            return nextProfile;
-          } finally {
-            setIsLoading(false);
+    () => ({
+      session,
+      profile,
+      isAuthenticated: Boolean(session && profile),
+      isLoading,
+      login: async (email, password) => {
+        setIsLoading(true);
+        try {
+          await signIn(email, password);
+          const nextSession = await getSession();
+          setSession(nextSession);
+          const nextProfile = await waitForProfile();
+          if (!nextProfile) {
+            throw new Error("Unable to load your profile. Please try again.");
           }
-        },
-        register: async ({ fullName, email, password, role }) => {
-          setIsLoading(true);
-          try {
-            const sessionResult = await signUp({ fullName, email, password, role });
-            setSession(sessionResult);
+          setProfile(nextProfile);
+          return nextProfile;
+        } finally {
+          setIsLoading(false);
+        }
+      },
+      register: async ({ fullName, email, password, role }) => {
+        setIsLoading(true);
+        try {
+          const sessionResult = await signUp({ fullName, email, password, role });
+          setSession(sessionResult);
 
-            if (!sessionResult) {
-              setProfile(null);
-              return null;
-            }
-
-            const nextProfile = await waitForProfile();
-            if (!nextProfile) {
-              throw new Error("Unable to load your profile. Please try again.");
-            }
-            setProfile(nextProfile);
-            return nextProfile;
-          } finally {
-            setIsLoading(false);
+          if (!sessionResult) {
+            setProfile(null);
+            return null;
           }
-        },
-        logout: async () => {
-          await signOut();
-          setSession(null);
-          setProfile(null);
-          queryClient.clear();
-        },
+
+          const nextProfile = await waitForProfile();
+          if (!nextProfile) {
+            throw new Error("Unable to load your profile. Please try again.");
+          }
+          setProfile(nextProfile);
+          return nextProfile;
+        } finally {
+          setIsLoading(false);
+        }
+      },
+      requestPasswordReset: async (email) => {
+        await sendPasswordResetEmail(email, passwordResetRedirect);
+      },
+      resetPassword: async (password) => {
+        await updatePassword(password);
+      },
+      logout: async () => {
+        await signOut();
+        setSession(null);
+        setProfile(null);
+        queryClient.clear();
+      },
       refreshProfile,
       saveProfile: async (input) => {
         await updateProfile(input);
         await refreshProfile();
       },
     }),
-    [session, profile, isLoading],
+    [session, profile, isLoading, passwordResetRedirect],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

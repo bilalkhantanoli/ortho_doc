@@ -8,6 +8,8 @@ import { queryClient } from "@/lib/queryClient";
 import Landing from "./pages/Landing";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
+import ForgotPassword from "./pages/auth/ForgotPassword";
+import ResetPassword from "./pages/auth/ResetPassword";
 import DoctorDashboard from "./pages/doctor/DoctorDashboard";
 import Patients from "./pages/doctor/Patients";
 import PatientDashboard from "./pages/patient/PatientDashboard";
@@ -47,6 +49,8 @@ const App = () => (
           <Route path="/" element={<Landing />} />
           <Route path="/auth/login" element={<Login />} />
           <Route path="/auth/register" element={<Register />} />
+          <Route path="/auth/forgot-password" element={<ForgotPassword />} />
+          <Route path="/auth/reset-password" element={<ResetPassword />} />
           
           {/* Doctor Routes */}
           <Route path="/doctor/dashboard" element={<ProtectedRoute role="doctor"><DoctorDashboard /></ProtectedRoute>} />

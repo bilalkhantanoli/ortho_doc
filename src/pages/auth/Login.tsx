@@ -107,7 +107,7 @@ const Login = () => {
                       <Input
                         id="password"
                         type={showPassword ? 'text' : 'password'}
-                        placeholder="••••••••"
+                        placeholder="Password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         className="pr-10"
@@ -133,6 +133,10 @@ const Login = () => {
                     {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                     Sign In
                   </Button>
+
+                  <Link to="/auth/forgot-password" className="text-sm font-medium text-muted-foreground hover:text-primary hover:underline">
+                    Forgot your password?
+                  </Link>
 
                   <p className="text-center text-sm text-muted-foreground">
                     New here?{' '}

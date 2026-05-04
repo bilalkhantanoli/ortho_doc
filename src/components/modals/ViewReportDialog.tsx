@@ -13,6 +13,8 @@ import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
 import type { CaseRecord } from '@/lib/domain';
+import { buildCaseReportPdf } from '@/lib/reportPdf';
+import { downloadPdf } from '@/lib/pdf';
 
 interface ViewReportDialogProps {
   open: boolean;
@@ -24,7 +26,8 @@ export const ViewReportDialog = ({ open, onOpenChange, caseData }: ViewReportDia
   if (!caseData) return null;
 
   const handleDownloadReport = () => {
-    toast.success('Report downloaded successfully!');
+    downloadPdf(buildCaseReportPdf(caseData), `case-${caseData.id}.pdf`);
+    toast.success('Report downloaded as PDF.');
   };
 
   const getStatusColor = (status: string) => {

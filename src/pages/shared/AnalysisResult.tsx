@@ -10,6 +10,8 @@ import { useCaseDetailQuery, useApproveCaseMutation } from '@/hooks/useCases';
 import { findImageUrl, jsonToText, parseLandmarkDiagnosis } from '@/lib/landmark';
 import { toast } from 'sonner';
 import { getErrorMessage } from '@/lib/errors';
+import { buildCaseReportPdf } from '@/lib/reportPdf';
+import { downloadPdf } from '@/lib/pdf';
 
 interface AnalysisResultProps {
   role: 'doctor' | 'patient';
@@ -66,22 +68,8 @@ const AnalysisResult = ({ role }: AnalysisResultProps) => {
       return;
     }
 
-    const payload = {
-      caseId: caseRecord.id,
-      title: caseRecord.title,
-      status: caseRecord.status,
-      patient: caseRecord.patientName,
-      analysis: caseRecord.analysis,
-      bracePreference: caseRecord.bracePreference,
-    };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = `case-${caseRecord.id}.json`;
-    anchor.click();
-    URL.revokeObjectURL(url);
-    toast.success('Report downloaded successfully!');
+    downloadPdf(buildCaseReportPdf(caseRecord), `case-${caseRecord.id}.pdf`);
+    toast.success('Report downloaded as PDF.');
   };
 
   const handleApprove = async () => {

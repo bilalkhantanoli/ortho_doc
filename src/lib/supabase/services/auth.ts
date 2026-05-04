@@ -115,6 +115,24 @@ export const signOut = async () => {
   }
 };
 
+export const sendPasswordResetEmail = async (email: string, redirectTo: string) => {
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo,
+  });
+
+  if (error) {
+    throw error;
+  }
+};
+
+export const updatePassword = async (password: string) => {
+  const { error } = await supabase.auth.updateUser({ password });
+
+  if (error) {
+    throw error;
+  }
+};
+
 export const updateProfile = async (input: {
   fullName: string;
   age: number | null;

@@ -9,6 +9,8 @@ import { useCasesQuery } from '@/hooks/useCases';
 import { useDoctorsQuery } from '@/hooks/useAppointments';
 import { buildReportRows, getSlotDisplayLabel } from '@/lib/healthcare';
 import { toast } from 'sonner';
+import { buildMedicalReportsPdf } from '@/lib/reportPdf';
+import { downloadPdf } from '@/lib/pdf';
 
 const Reports = () => {
   const [reportTypeFilter, setReportTypeFilter] = useState('all');
@@ -26,15 +28,14 @@ const Reports = () => {
 
   const handleDownload = (reportId?: string) => {
     const targetReports = reportId ? reportRows.filter((report) => report.id === reportId) : visibleReports;
-    const payload = JSON.stringify(targetReports, null, 2);
-    const blob = new Blob([payload], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = reportId ? `report-${reportId}.json` : 'medical-reports.json';
-    link.click();
-    URL.revokeObjectURL(url);
-    toast.success(reportId ? 'Report downloaded.' : 'Reports downloaded.');
+    downloadPdf(
+      buildMedicalReportsPdf(targetReports, {
+        reportType: reportTypeFilter,
+        doctor: doctorFilter,
+      }),
+      reportId ? `report-${reportId}.pdf` : 'medical-reports.pdf',
+    );
+    toast.success(reportId ? 'Report downloaded as PDF.' : 'Reports downloaded as PDF.');
   };
 
   const handleShare = async (doctorName: string, reportTitle: string) => {
