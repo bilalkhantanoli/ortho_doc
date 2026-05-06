@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { getErrorMessage } from '@/lib/errors';
 import { buildCaseReportPdf } from '@/lib/reportPdf';
 import { downloadPdf } from '@/lib/pdf';
+import { sanitizeVisibleText } from '@/lib/utils';
 
 interface AnalysisResultProps {
   role: 'doctor' | 'patient';
@@ -49,7 +50,7 @@ const AnalysisResult = ({ role }: AnalysisResultProps) => {
   );
 
   const rawAnalysisText = useMemo(
-    () => jsonToText(caseRecord?.analysis?.rawResponse ?? caseRecord?.analysis?.notes ?? ''),
+    () => sanitizeVisibleText(jsonToText(caseRecord?.analysis?.rawResponse ?? caseRecord?.analysis?.notes ?? '')),
     [caseRecord],
   );
 
@@ -216,7 +217,10 @@ const AnalysisResult = ({ role }: AnalysisResultProps) => {
             <div className="flex items-center gap-2">
               <Palette className="h-5 w-5 text-primary" />
               <p className="font-semibold text-foreground">
-                {caseRecord.bracePreference?.braceOptionName ?? diagnosis ?? caseRecord.analysis?.summary ?? 'Pending recommendation'}
+                {sanitizeVisibleText(caseRecord.bracePreference?.braceOptionName) ||
+                  sanitizeVisibleText(diagnosis) ||
+                  sanitizeVisibleText(caseRecord.analysis?.summary) ||
+                  'Pending recommendation'}
               </p>
             </div>
             <p className="text-sm text-muted-foreground">

@@ -130,7 +130,7 @@ export const UploadXrayDialog = ({ open, onOpenChange, role }: UploadXrayDialogP
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="flex max-h-[90vh] flex-col overflow-hidden sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>Upload X-ray Image</DialogTitle>
           <DialogDescription>
@@ -138,7 +138,7 @@ export const UploadXrayDialog = ({ open, onOpenChange, role }: UploadXrayDialogP
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
+        <div className="min-h-0 space-y-4 overflow-y-auto py-4 pr-1">
           <div className="space-y-2">
             <Label htmlFor="dialog-case-title">Case Title</Label>
             <Input
@@ -269,35 +269,34 @@ export const UploadXrayDialog = ({ open, onOpenChange, role }: UploadXrayDialogP
               </motion.div>
             )}
           </AnimatePresence>
+        </div>
 
-          {/* Actions */}
-          <div className="flex gap-3">
-            <Button
-              variant="outline"
-              onClick={handleClose}
-              disabled={isAnalyzing}
-              className="flex-1"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleUpload}
-              disabled={!file || isAnalyzing}
-              className="flex-1"
-            >
-              {isAnalyzing ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Analyzing...
-                </>
-              ) : (
-                <>
-                  <Upload className="mr-2 h-4 w-4" />
-                  Analyze Image
-                </>
-              )}
-            </Button>
-          </div>
+        <div className="flex shrink-0 gap-3 border-t pt-4">
+          <Button
+            variant="outline"
+            onClick={handleClose}
+            disabled={isAnalyzing}
+            className="flex-1"
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleUpload}
+            disabled={!file || isAnalyzing}
+            className="flex-1"
+          >
+            {isAnalyzing ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Analyzing...
+              </>
+            ) : (
+              <>
+                <Upload className="mr-2 h-4 w-4" />
+                Analyze Image
+              </>
+            )}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

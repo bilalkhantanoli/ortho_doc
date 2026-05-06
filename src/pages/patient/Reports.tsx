@@ -28,6 +28,11 @@ const Reports = () => {
 
   const handleDownload = (reportId?: string) => {
     const targetReports = reportId ? reportRows.filter((report) => report.id === reportId) : visibleReports;
+    if (!targetReports.length) {
+      toast.error('No reports available to download.');
+      return;
+    }
+
     downloadPdf(
       buildMedicalReportsPdf(targetReports, {
         reportType: reportTypeFilter,

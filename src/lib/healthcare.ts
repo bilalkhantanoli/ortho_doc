@@ -1,6 +1,7 @@
 import { format } from "date-fns";
 import type { Appointment, CaseRecord, DoctorSummary } from "@/lib/domain";
 import { APPOINTMENT_TIME_SLOTS } from "@/lib/constants";
+import { sanitizeVisibleText } from "@/lib/utils";
 
 export interface DoctorCard {
   id: string;
@@ -81,9 +82,9 @@ const buildCareSummary = (cases: CaseRecord[], appointments: Appointment[]) => {
   const latestCase = cases[0];
 
   const latestSignal =
-    latestCase?.analysis?.summary ??
-    latestCase?.analysis?.notes ??
-    latestCase?.title ??
+    sanitizeVisibleText(latestCase?.analysis?.summary) ||
+    sanitizeVisibleText(latestCase?.analysis?.notes) ||
+    latestCase?.title ||
     "Care history available";
 
   return `${caseCount} case${caseCount === 1 ? "" : "s"} and ${appointmentCount} appointment${appointmentCount === 1 ? "" : "s"} on file. ${latestSignal}`;
@@ -109,7 +110,11 @@ const buildReviewLabel = (cases: CaseRecord[]) => {
     return "No patient feedback recorded";
   }
 
-  return latestCase.analysis?.notes ?? latestCase.analysis?.summary ?? "Clinical notes available";
+  return (
+    sanitizeVisibleText(latestCase.analysis?.notes) ||
+    sanitizeVisibleText(latestCase.analysis?.summary) ||
+    "Clinical notes available"
+  );
 };
 
 const buildRecommendationLabel = (careFocus: string) => {
@@ -172,8 +177,8 @@ export const buildMedicalHistory = (
     id: `treatment-${caseItem.id}`,
     label: caseItem.bracePreference?.braceOptionName ?? caseItem.title,
     detail:
-      caseItem.analysis?.summary ??
-      caseItem.analysis?.notes ??
+      sanitizeVisibleText(caseItem.analysis?.summary) ||
+      sanitizeVisibleText(caseItem.analysis?.notes) ||
       "Treatment monitored through case review.",
     date: caseItem.updatedAt,
     tone: index === 0 ? "success" : "primary",
@@ -181,8 +186,8 @@ export const buildMedicalHistory = (
 
   const diagnosisItems = latestCases.map((caseItem, index) => ({
     id: `diagnosis-${caseItem.id}`,
-    label: caseItem.analysis?.summary ?? caseItem.title,
-    detail: caseItem.analysis?.notes ?? "Diagnosis captured during care review.",
+    label: sanitizeVisibleText(caseItem.analysis?.summary) || caseItem.title,
+    detail: sanitizeVisibleText(caseItem.analysis?.notes) || "Diagnosis captured during care review.",
     date: caseItem.createdAt,
     tone: index === 0 ? "secondary" : "muted",
   })) satisfies MedicalHistoryItem[];
@@ -214,8 +219,8 @@ export const buildReportRows = (cases: CaseRecord[]): ReportRow[] =>
       date: caseItem.createdAt,
       doctor: caseItem.doctorName ?? "Assigned doctor",
       summary:
-        caseItem.analysis?.summary ??
-        caseItem.analysis?.notes ??
+        sanitizeVisibleText(caseItem.analysis?.summary) ||
+        sanitizeVisibleText(caseItem.analysis?.notes) ||
         "Structured report available for review and sharing.",
       source: isLabReport ? ("lab" as const) : ("xray" as const),
     };

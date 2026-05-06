@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import type { CaseRecord } from '@/lib/domain';
 import { buildCaseReportPdf } from '@/lib/reportPdf';
 import { downloadPdf } from '@/lib/pdf';
+import { sanitizeVisibleText } from '@/lib/utils';
 
 interface ViewReportDialogProps {
   open: boolean;
@@ -24,6 +25,10 @@ interface ViewReportDialogProps {
 
 export const ViewReportDialog = ({ open, onOpenChange, caseData }: ViewReportDialogProps) => {
   if (!caseData) return null;
+
+  const sanitizedSummary = sanitizeVisibleText(caseData.analysis?.summary);
+  const sanitizedNotes = sanitizeVisibleText(caseData.analysis?.notes);
+  const sanitizedRecommendation = sanitizeVisibleText(caseData.bracePreference?.braceOptionName) || sanitizedSummary;
 
   const handleDownloadReport = () => {
     downloadPdf(buildCaseReportPdf(caseData), `case-${caseData.id}.pdf`);
@@ -133,7 +138,7 @@ export const ViewReportDialog = ({ open, onOpenChange, caseData }: ViewReportDia
               <div className="rounded-lg bg-primary/5 p-4">
                 <h3 className="mb-2 font-semibold text-foreground">Recommended Treatment</h3>
                 <p className="text-lg font-medium text-primary">
-                  {caseData.bracePreference?.braceOptionName ?? caseData.analysis.summary ?? 'Pending recommendation'}
+                  {sanitizedRecommendation || 'Pending recommendation'}
                 </p>
               </div>
 
@@ -141,7 +146,7 @@ export const ViewReportDialog = ({ open, onOpenChange, caseData }: ViewReportDia
               <div>
                 <h3 className="mb-2 font-semibold text-foreground">Clinical Notes</h3>
                 <div className="rounded-lg bg-muted p-4">
-                  <p className="text-sm text-foreground">{caseData.analysis.notes ?? 'No notes provided.'}</p>
+                  <p className="text-sm text-foreground">{sanitizedNotes || 'No notes provided.'}</p>
                 </div>
               </div>
             </>

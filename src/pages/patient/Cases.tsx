@@ -10,6 +10,7 @@ import { useCasesQuery, useDeleteCaseMutation } from '@/hooks/useCases';
 import type { CaseRecord } from '@/lib/domain';
 import { toast } from 'sonner';
 import { getErrorMessage } from '@/lib/errors';
+import { sanitizeVisibleText } from '@/lib/utils';
 
 const Cases = () => {
   const navigate = useNavigate();
@@ -45,7 +46,13 @@ const Cases = () => {
         </div>
 
         <div className="grid gap-4">
-          {cases.map((caseItem) => (
+          {cases.map((caseItem) => {
+            const sanitizedSummary = sanitizeVisibleText(caseItem.analysis?.summary);
+            const sanitizedRecommendation =
+              sanitizeVisibleText(caseItem.bracePreference?.braceOptionName) || sanitizedSummary;
+            const sanitizedNotes = sanitizeVisibleText(caseItem.analysis?.notes);
+
+            return (
             <Card key={caseItem.id} className="transition-all hover:shadow-md">
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -64,19 +71,19 @@ const Cases = () => {
                         {new Date(caseItem.createdAt).toLocaleDateString()}
                       </p>
                     </div>
-                    {caseItem.analysis?.summary && (
+                    {sanitizedRecommendation && (
                       <div>
                         <span className="text-muted-foreground">Recommendation:</span>
                         <p className="font-medium text-foreground">
-                          {caseItem.bracePreference?.braceOptionName ?? caseItem.analysis.summary}
+                          {sanitizedRecommendation || 'Pending recommendation'}
                         </p>
                       </div>
                     )}
                   </div>
 
-                  {caseItem.analysis?.notes && (
+                  {sanitizedNotes && (
                     <div className="rounded-lg bg-muted p-3">
-                      <p className="text-sm text-muted-foreground">{caseItem.analysis.notes}</p>
+                      <p className="text-sm text-muted-foreground">{sanitizedNotes}</p>
                     </div>
                   )}
 
@@ -117,7 +124,8 @@ const Cases = () => {
                 </div>
               </CardContent>
             </Card>
-          ))}
+            );
+          })}
         </div>
 
         {!isLoading && cases.length === 0 && (

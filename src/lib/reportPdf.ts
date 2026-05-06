@@ -1,6 +1,7 @@
 import type { CaseRecord } from '@/lib/domain';
 import type { PdfDocumentInput, PdfSection } from '@/lib/pdf';
 import type { ReportRow } from '@/lib/healthcare';
+import { sanitizeVisibleText } from '@/lib/utils';
 
 const formatDate = (value: string) =>
   new Date(value).toLocaleDateString('en-US', {
@@ -28,8 +29,8 @@ const buildCaseSections = (caseData: CaseRecord): PdfSection[] => {
     {
       title: 'Analysis Summary',
       paragraphs: [
-        analysis.summary ?? 'No summary available.',
-        analysis.notes ?? 'No clinical notes were provided.',
+        sanitizeVisibleText(analysis.summary) || 'No summary available.',
+        sanitizeVisibleText(analysis.notes) || 'No clinical notes were provided.',
       ],
     },
     {
@@ -45,8 +46,8 @@ const buildCaseSections = (caseData: CaseRecord): PdfSection[] => {
     {
       title: 'Recommendation',
       paragraphs: [
-        caseData.bracePreference?.braceOptionName ??
-          analysis.summary ??
+        sanitizeVisibleText(caseData.bracePreference?.braceOptionName) ||
+          sanitizeVisibleText(analysis.summary) ||
           'Pending recommendation.',
       ],
     },
@@ -77,14 +78,21 @@ export const buildMedicalReportsPdf = (
     { label: 'Report type filter', value: filters.reportType },
     { label: 'Doctor filter', value: filters.doctor },
   ],
-  sections: reports.map((report) => ({
-    title: report.title,
-    fields: [
-      { label: 'Type', value: report.type },
-      { label: 'Doctor', value: report.doctor },
-      { label: 'Date', value: formatDate(report.date) },
-    ],
-    paragraphs: [report.summary],
-  })),
+  sections: reports.length
+    ? reports.map((report) => ({
+        title: report.title,
+        fields: [
+          { label: 'Type', value: report.type },
+          { label: 'Doctor', value: report.doctor },
+          { label: 'Date', value: formatDate(report.date) },
+        ],
+        paragraphs: [sanitizeVisibleText(report.summary) || 'Structured report available for review and sharing.'],
+      }))
+    : [
+        {
+          title: 'No Reports Available',
+          paragraphs: ['No reports matched the selected filters at the time of export.'],
+        },
+      ],
   footer: 'OrthoDoc AI medical reports export',
 });
