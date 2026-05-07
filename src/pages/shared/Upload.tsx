@@ -12,6 +12,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useCreateCaseMutation } from '@/hooks/useCases';
 import { useDoctorsQuery } from '@/hooks/useAppointments';
 import { usePatientsQuery } from '@/hooks/usePatients';
+import { validateCephalogramXray } from '@/lib/gradio';
 import { toast } from 'sonner';
 import { getErrorMessage } from '@/lib/errors';
 
@@ -79,6 +80,34 @@ const Upload = ({ role }: UploadProps) => {
     }, 300);
 
     try {
+      setProgress(20);
+      let validation;
+      try {
+        validation = await validateCephalogramXray(file, 50);
+      } catch (validationError) {
+        clearInterval(progressInterval);
+        toast.error(
+          validationError instanceof Error ? validationError.message : 'Validation service unavailable'
+        );
+        setIsAnalyzing(false);
+        setProgress(0);
+        return;
+      }
+
+      if (!validation.isCephalogram) {
+        clearInterval(progressInterval);
+        const label = validation.topLabel || 'unknown';
+        toast.error(
+          `This image is not a cephalogram X-ray (model predicts "${label}" at ${validation.topConfidence.toFixed(1)}%). ` +
+            `Please upload a lateral cephalometric radiograph.`
+        );
+        setIsAnalyzing(false);
+        setProgress(0);
+        return;
+      }
+
+      setProgress(40);
+
       const caseId = await createCaseMutation.mutateAsync({
         file,
         title: title.trim(),

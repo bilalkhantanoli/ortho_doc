@@ -11,4 +11,5 @@ export const env = {
   supabaseAnonKey: requiredEnv(import.meta.env.VITE_SUPABASE_ANON_KEY, "VITE_SUPABASE_ANON_KEY"),
   gradioSpaceUrl: import.meta.env.VITE_GRADIO_SPACE_URL ?? "",
   gradioApiName: import.meta.env.VITE_GRADIO_API_NAME ?? "/predict_landmarks",
+  preModelUrl: import.meta.env.VITE_PREMODEL_URL ?? "muzzammil0602/premodel-ortho",
 };

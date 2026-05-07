@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Upload, Loader2, CheckCircle2, Image as ImageIcon, X } from 'lucide-react';
+import { Upload, Loader2, CheckCircle2, Image as ImageIcon, X, AlertCircle } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -17,6 +17,7 @@ import { useDoctorsQuery } from '@/hooks/useAppointments';
 import { useAuth } from '@/hooks/useAuth';
 import { useCreateCaseMutation } from '@/hooks/useCases';
 import { usePatientsQuery } from '@/hooks/usePatients';
+import { validateCephalogramXray } from '@/lib/gradio';
 import { toast } from 'sonner';
 import { getErrorMessage } from '@/lib/errors';
 
@@ -85,6 +86,35 @@ export const UploadXrayDialog = ({ open, onOpenChange, role }: UploadXrayDialogP
     }, 300);
 
     try {
+      // Validate if the image is a cephalogram X-ray
+      setProgress(20);
+      let validation;
+      try {
+        validation = await validateCephalogramXray(file, 50);
+      } catch (validationError) {
+        clearInterval(progressInterval);
+        const errorMsg = validationError instanceof Error ? validationError.message : 'Validation service unavailable';
+        toast.error(errorMsg);
+        setIsAnalyzing(false);
+        setProgress(0);
+        return;
+      }
+      
+      if (!validation.isCephalogram) {
+        clearInterval(progressInterval);
+        const label = validation.topLabel || 'unknown';
+        toast.error(
+          `This image is not a cephalogram X-ray (model predicts "${label}" at ${validation.topConfidence.toFixed(1)}%). ` +
+            `Please upload a lateral cephalometric radiograph.`
+        );
+        setIsAnalyzing(false);
+        setProgress(0);
+        return;
+      }
+
+      setProgress(40);
+      toast.success(`Cephalogram check passed (${validation.topConfidence.toFixed(1)}% "${validation.topLabel}")`);
+
       const caseId = await createCaseMutation.mutateAsync({
         file,
         title: title.trim(),
@@ -106,7 +136,8 @@ export const UploadXrayDialog = ({ open, onOpenChange, role }: UploadXrayDialogP
       setDoctorId('');
     } catch (error) {
       clearInterval(progressInterval);
-      toast.error(getErrorMessage(error, 'Analysis failed. Please try again.'));
+      const errorMessage = getErrorMessage(error, 'Analysis failed. Please try again.');
+      toast.error(errorMessage);
       setIsAnalyzing(false);
       setProgress(0);
     }
