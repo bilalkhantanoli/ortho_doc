@@ -161,10 +161,10 @@ const createPdfDocument = (input: PdfDocumentInput) => {
   pages.forEach((page, index) => {
     const pageObjectId = pageObjectIds[index];
     const contentObjectId = contentObjectIds[index];
-    objects.push(`${contentObjectId} 0 obj << /Length ${page.length} >> stream\n${page}\nendstream endobj`);
     objects.push(
       `${pageObjectId} 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ${contentObjectId} 0 R >> endobj`,
     );
+    objects.push(`${contentObjectId} 0 obj << /Length ${page.length} >> stream\n${page}\nendstream endobj`);
   });
 
   let pdf = "%PDF-1.4\n";

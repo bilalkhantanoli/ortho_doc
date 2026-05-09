@@ -18,10 +18,16 @@ const ForgotPassword = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail) {
+      toast.error('Please enter your email address.');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      await requestPasswordReset(email);
+      await requestPasswordReset(normalizedEmail);
       setSent(true);
       toast.success('Password reset email sent.');
     } catch (error) {

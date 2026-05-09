@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Loader2, LockKeyhole, Sparkles } from 'lucide-react';
@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 import { getErrorMessage } from '@/lib/errors';
 
@@ -16,9 +17,49 @@ const ResetPassword = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isRecoveryReady, setIsRecoveryReady] = useState(false);
+  const [sessionCheckDone, setSessionCheckDone] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const ensureRecoverySession = async () => {
+      for (let attempt = 0; attempt < 10; attempt += 1) {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (!mounted) return;
+
+        if (session) {
+          setIsRecoveryReady(true);
+          setSessionCheckDone(true);
+          return;
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, 200));
+      }
+
+      if (mounted) {
+        setIsRecoveryReady(false);
+        setSessionCheckDone(true);
+      }
+    };
+
+    void ensureRecoverySession();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!isRecoveryReady) {
+      toast.error('Recovery link is invalid or expired. Please request a new reset email.');
+      return;
+    }
 
     if (password !== confirmPassword) {
       toast.error('Passwords do not match.');
@@ -93,6 +134,11 @@ const ResetPassword = () => {
 
               <form onSubmit={handleSubmit}>
                 <CardContent className="space-y-5">
+                  {sessionCheckDone && !isRecoveryReady && (
+                    <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-4 text-sm text-foreground">
+                      This reset link is invalid or expired. Please go back and request a new one.
+                    </div>
+                  )}
                   <div className="space-y-2">
                     <Label htmlFor="password">New password</Label>
                     <Input
@@ -121,7 +167,11 @@ const ResetPassword = () => {
                 </CardContent>
 
                 <CardFooter className="flex flex-col gap-4">
-                  <Button type="submit" className="w-full" disabled={isLoading}>
+                  <Button
+                    type="submit"
+                    className="w-full"
+                    disabled={isLoading || !sessionCheckDone || !isRecoveryReady}
+                  >
                     {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                     Update password
                   </Button>
