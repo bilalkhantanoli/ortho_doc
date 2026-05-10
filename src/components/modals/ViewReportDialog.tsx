@@ -13,6 +13,7 @@ import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
 import type { CaseRecord } from '@/lib/domain';
+import { jsonToText, parseLandmarkDiagnosis } from '@/lib/landmark';
 import { buildCaseReportPdf } from '@/lib/reportPdf';
 import { downloadPdf } from '@/lib/pdf';
 import { sanitizeVisibleText } from '@/lib/utils';
@@ -28,7 +29,11 @@ export const ViewReportDialog = ({ open, onOpenChange, caseData }: ViewReportDia
 
   const sanitizedSummary = sanitizeVisibleText(caseData.analysis?.summary);
   const sanitizedNotes = sanitizeVisibleText(caseData.analysis?.notes);
-  const sanitizedRecommendation = sanitizeVisibleText(caseData.bracePreference?.braceOptionName) || sanitizedSummary;
+  const rawDiagnosis = parseLandmarkDiagnosis(
+    jsonToText(caseData.analysis?.rawResponse ?? caseData.analysis?.notes ?? caseData.analysis?.summary ?? ''),
+  );
+  const sanitizedRecommendation =
+    sanitizeVisibleText(caseData.bracePreference?.braceOptionName) || rawDiagnosis || sanitizedSummary;
 
   const handleDownloadReport = () => {
     downloadPdf(buildCaseReportPdf(caseData), `case-${caseData.id}.pdf`);

@@ -63,5 +63,5 @@ export const parseLandmarkMetric = (text: string, label: "SNA" | "SNB" | "ANB") 
 
 export const parseLandmarkDiagnosis = (text: string) => {
   const match = text.match(/Diagnosis\s*:\s*(.+)/i);
-  return match?.[1]?.trim() ?? null;
+  return match?.[1]?.replace(/\s+\b(?:true|false)\b\s*$/i, '').trim() ?? null;
 };

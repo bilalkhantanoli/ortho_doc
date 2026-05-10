@@ -1,6 +1,7 @@
 import type { CaseRecord } from '@/lib/domain';
 import type { PdfDocumentInput, PdfSection } from '@/lib/pdf';
 import type { ReportRow } from '@/lib/healthcare';
+import { jsonToText, parseLandmarkDiagnosis } from '@/lib/landmark';
 import { sanitizeVisibleText } from '@/lib/utils';
 
 const formatDate = (value: string) =>
@@ -9,9 +10,6 @@ const formatDate = (value: string) =>
     month: 'long',
     day: 'numeric',
   });
-
-const metricValue = (value: number | null | undefined) =>
-  typeof value === 'number' ? `${value.toFixed(2)}%` : 'N/A';
 
 const buildCaseSections = (caseData: CaseRecord): PdfSection[] => {
   const analysis = caseData.analysis;
@@ -34,19 +32,10 @@ const buildCaseSections = (caseData: CaseRecord): PdfSection[] => {
       ],
     },
     {
-      title: 'Key Metrics',
-      fields: [
-        { label: 'Misalignment', value: metricValue(analysis.metrics.misalignment) },
-        { label: 'Symmetry', value: metricValue(analysis.metrics.symmetry) },
-        { label: 'Crowding', value: metricValue(analysis.metrics.crowding) },
-        { label: 'Overbite', value: metricValue(analysis.metrics.overbite) },
-        { label: 'Confidence', value: metricValue(analysis.metrics.confidence) },
-      ],
-    },
-    {
       title: 'Recommendation',
       paragraphs: [
         sanitizeVisibleText(caseData.bracePreference?.braceOptionName) ||
+          parseLandmarkDiagnosis(jsonToText(analysis.rawResponse ?? analysis.notes ?? analysis.summary ?? '')) ||
           sanitizeVisibleText(analysis.summary) ||
           'Pending recommendation.',
       ],
